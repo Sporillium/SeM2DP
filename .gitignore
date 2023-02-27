@@ -127,3 +127,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Random specifics
+*.h5
+*.pth
+*.png
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.caffemodel
+*.prototxt
