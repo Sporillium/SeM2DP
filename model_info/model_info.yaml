@@ -1,0 +1,80 @@
+# Document for Storing neccessary details required by the MIT_Semseg Library
+#   to define the various different segmentation framework options
+
+---
+colors: '/home/march/devel/DNNs/semantic-segmentation-pytorch/data/color150.mat'
+names: '/home/march/devel/DNNs/semantic-segmentation-pytorch/data/object150_info.csv'
+ID:
+  0: # ResNet101 Dilated with PPM DeepSup
+      enc_arch: 'resnet101dilated'
+      enc_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet101dilated-ppm_deepsup/encoder_epoch_25.pth'
+      dec_arch: 'ppm_deepsup'
+      dec_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet101dilated-ppm_deepsup/decoder_epoch_25.pth'
+      fc_dim: 2048
+      num_classes: 150
+      use_softmax: true
+
+  1:    #ResNet101 Dilated with UperNet
+      enc_arch: 'resnet101'
+      enc_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet101dilated-upernet/encoder_epoch_50.pth'
+      dec_arch: 'upernet'
+      dec_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet101dilated-upernet/decoder_epoch_50.pth'
+      fc_dim: 2048
+      num_classes: 150
+      use_softmax: true
+  
+  2:    #ResNet50 Dilated with PPM DeepSup
+      enc_arch: 'resnet50dilated'
+      enc_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet50dilated-ppm_deepsup/encoder_epoch_20.pth'
+      dec_arch: 'ppm_deepsup'
+      dec_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet50dilated-ppm_deepsup/decoder_epoch_20.pth'
+      fc_dim: 2048
+      num_classes: 150
+      use_softmax: true
+
+  3:    #ResNet50 Dilated with UperNet
+      enc_arch: 'resnet50dilated'
+      enc_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet50dilated-upernet/encoder_epoch_30.pth'
+      dec_arch: 'upernet'
+      dec_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet50dilated-upernet/decoder_epoch_30.pth'
+      fc_dim: 2048
+      num_classes: 150
+      use_softmax: true
+
+  4:    #ResNet18 Dilated with PPM DeepSup
+      enc_arch: 'resnet18dilated'
+      enc_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet18dilated-ppm_deepsup/encoder_epoch_20.pth'
+      dec_arch: 'ppm_deepsup'
+      dec_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet18dilated-ppm_deepsup/decoder_epoch_20.pth'
+      fc_dim: 512
+      num_classes: 150
+      use_softmax: true
+
+  5:    #ResNet18 Dilated with C1 DeepSup
+      enc_arch: 'resnet18dilated'
+      enc_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet18dilated-c1_deepsup/encoder_epoch_20.pth'
+      dec_arch: 'c1_deepsup'
+      dec_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-resnet18dilated-c1_deepsup/decoder_epoch_20.pth'
+      fc_dim: 512
+      num_classes: 150
+      use_softmax: true
+  
+  6:    #MobileNetV2 Dilated with Single Convolution DeepSup
+      enc_arch: 'mobilenetv2dilated'
+      enc_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-mobilenetv2dilated-c1_deepsup/encoder_epoch_20.pth'
+      dec_arch: 'c1_deepsup'
+      dec_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-mobilenetv2dilated-c1_deepsup/decoder_epoch_20.pth'
+      fc_dim: 320
+      num_classes: 150
+      use_softmax: true
+
+  7:    #HRNetV2 with single Convolution
+      enc_arch: 'hrnetv2'
+      enc_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-hrnetv2_c1/encoder_epoch_30.pth'
+      dec_arch: 'c1'
+      dec_weights: '/home/march/devel/DNNs/semantic-segmentation-pytorch/ckpt/ade20k-hrnetv2_c1/decoder_epoch_30.pth'
+      fc_dim: 720
+      num_classes: 150
+      use_softmax: true
+
+  
