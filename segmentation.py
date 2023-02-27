@@ -9,6 +9,7 @@ import csv
 import scipy.io
 from yaml.loader import SafeLoader
 import torchvision.transforms
+
 # Import Required MIT_Semseg Packages
 from mit_semseg.models import ModelBuilder, SegmentationModule
 from mit_semseg.utils import colorEncode
