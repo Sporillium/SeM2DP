@@ -1,0 +1,59 @@
+# Document for storing information about camera specifications 
+#   for various different stereo camera set-ups:
+
+---
+ID:
+  0: #KITTI Visual Odometry Cameras
+      name: 'kitti'
+      baseline: 0.53329094
+      focal_length: 718.856
+      x_off: 607.1928
+      y_off: 185.2157
+      image_path: '/home/march/devel/datasets/Kitti/odometry-2012/sequences/'
+      seq_id: 
+        - '00/'
+        - '01/'
+        - '02/'
+        - '03/'
+        - '04/'
+        - '05/'
+        - '06/'
+        - '07/'
+        - '08/'
+        - '09/'
+        - '10/'
+        - '11/'
+        - '12/'
+        - '13/'
+        - '14/'
+        - '15/'
+        - '16/'
+        - '17/'
+        - '18/'
+        - '19/'
+        - '20/'
+        - '21/'
+      seq_len:
+        - 4540
+        - 1100 
+        - 4660
+        - 800
+        - 270
+        - 2760
+        - 1100
+        - 1100
+        - 4070
+        - 1590
+        - 1200
+        - 920
+        - 1060
+        - 3280
+        - 630
+        - 1900
+        - 1730
+        - 490
+        - 1800
+        - 4980
+        - 830
+        - 2720
+      poses_path: '/home/march/devel/datasets/Kitti/odometry-2012/poses/'
