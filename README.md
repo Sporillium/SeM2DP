@@ -11,3 +11,5 @@ Repository for storing the code used in my Master's thesis, an implementation of
 * SciPy
 * Torchvision
 * MIT Semantic Segmentation
+
+# This is just a test
