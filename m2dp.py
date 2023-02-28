@@ -372,6 +372,32 @@ class m2dp:
         d = np.concatenate((u.T[0,:], vh[0,:])).T
         print(d.shape)
         return d
+    
+    def extractAndProcess(self, point_cloud):
+        """
+        Makes a general call to all processing methods in the M2DP class, and processes a given point cloud into a descriptor 
+
+        Parameters:
+        ----------
+            point_cloud: Array or list of points in point cloud with 3D coordinates
+
+        Returns:
+        ----------
+            descriptor: Vector of values that serves as the descriptor of the scene, of shape [(P*Q + L*T), 1]
+        """
+        # Read the point cloud into the object memory
+        self.readCloud(point_cloud)
+
+        # Calculate the centroid of the point cloud
+        self.centroidPointCloud()
+
+        # Define the principle axes of the point cloud using PCA
+        self.cloudAxes()
+
+        # Generate the descriptor using planar projection, and return
+        descriptor = self.calculateDescriptor()
+        return descriptor
+
 
 
 
