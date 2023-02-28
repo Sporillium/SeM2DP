@@ -16,6 +16,32 @@ from mit_semseg.utils import colorEncode
 
 class SegmentationEngine:
     def __init__(self, model_id=6, use_gpu=False):
+        """
+        Initialises a SegmentationEngine Object, which is used to perform semantic segmentation on images 
+
+        Parameters:
+        ----------
+            model_id: Defines which Segmentation Model to use (refer to model_info.yaml for IDs).
+                        Defaults value: 6
+            
+            use_gpu: Defines whether tensor operations should be processed using the discrete GPU.
+                        Default value: False
+
+        Instance Variables:
+        ----------
+            use_gpu: Boolean
+            enc: String
+            dec: String
+
+            colours: Dict
+            names: Dict
+
+            segmentation_module: SegmentationModule object
+                        
+        Returns:
+        ----------
+            Instance of SegmentationEngine object
+        """
         self.use_gpu = use_gpu
         # Read YAML file with required config options in it:
         with open('./model_info/model_info.yaml') as f:
@@ -58,6 +84,23 @@ class SegmentationEngine:
 
     # ----- Method Definitions -----
     def visualise_result(self, img, pred, index=None):
+        """
+        Creates a visualisation for a given segmentation result, using the original image and the matrix of predictions for each pixel.
+        The predictions define the colours used for visualisation, based on a set of pre-defined colours. 
+
+        Parameters:
+        ----------
+            img: Matrix containing the loaded image
+            
+            pred: Matrix of pixel-wise class predictions for each pixel in img
+
+            index: Specifies specific prediction class to visualise in resultant image.
+                    Default value: None
+
+        Returns:
+        ----------
+            output: Image matrix of same size as img
+        """
         if index is not None:
             pred = pred.copy()
             pred[pred != index] = -1
