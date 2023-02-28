@@ -6,7 +6,7 @@ import numpy as np
 import cv2 as cv
 import yaml
 import csv
-import scipy.io
+from scipy.io import loadmat
 from yaml.loader import SafeLoader
 import torchvision.transforms
 
@@ -14,6 +14,7 @@ import torchvision.transforms
 from mit_semseg.models import ModelBuilder, SegmentationModule
 from mit_semseg.utils import colorEncode
 
+# ----- Class Definition ----- 
 class SegmentationEngine:
     def __init__(self, model_id=6, use_gpu=False):
         """
@@ -55,7 +56,7 @@ class SegmentationEngine:
             self.dec = model_data['dec_arch']
             f.close()
 
-        self.colours = scipy.io.loadmat(col_path)['colors']
+        self.colours = loadmat(col_path)['colors']
         self.names = {}
         with open(names_path) as f:
             reader = csv.reader(f)
