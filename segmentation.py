@@ -110,6 +110,18 @@ class SegmentationEngine:
         return output
 
     def segmentImageVis(self, img):
+        """
+        Segments a given image, and then generates a visualisation of that image based on the predictions of the
+        semantic segmentation 
+
+        Parameters:
+        ----------
+            img: Matrix containing the loaded image
+
+        Returns:
+        ----------
+            output: Image matrix of same size as img, with added colour overlay showing semantic classes
+        """
         to_tensor = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(
@@ -136,6 +148,17 @@ class SegmentationEngine:
         return output
         
     def segmentImageDist(self, img):
+        """
+        Semantically segments a given image, and then returns the full class distribution tensor for all classes across all pixels in the image. 
+
+        Parameters:
+        ----------
+            img: Matrix containing the loaded image
+
+        Returns:
+        ----------
+            dist: Tensor of probability of each pixel being a specific class
+        """
         to_tensor = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(
@@ -159,6 +182,17 @@ class SegmentationEngine:
         return dist
 
     def segmentImageMax(self, img):
+        """
+        Semantically segments a given image, and then returns only the maximum likelihood class for each pixel in the image
+
+        Parameters:
+        ----------
+            img: Matrix containing the loaded image
+
+        Returns:
+        ----------
+            pred: Matrix of Maximum Likelihood classes for each pixel
+        """
         to_tensor = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(
