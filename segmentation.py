@@ -16,33 +16,33 @@ from mit_semseg.utils import colorEncode
 
 # ----- Class Definition ----- 
 class SegmentationEngine:
+    """
+    Initialises a SegmentationEngine Object, which is used to perform semantic segmentation on images 
+
+    Parameters:
+    ----------
+        model_id: Defines which Segmentation Model to use (refer to model_info.yaml for IDs).
+                    Defaults value: 6
+        
+        use_gpu: Defines whether tensor operations should be processed using the discrete GPU.
+                    Default value: False
+
+    Instance Variables:
+    ----------
+        use_gpu: Boolean
+        enc: String
+        dec: String
+
+        colours: Dict
+        names: Dict
+
+        segmentation_module: SegmentationModule object
+                    
+    Returns:
+    ----------
+        Instance of SegmentationEngine object
+    """
     def __init__(self, model_id=6, use_gpu=False):
-        """
-        Initialises a SegmentationEngine Object, which is used to perform semantic segmentation on images 
-
-        Parameters:
-        ----------
-            model_id: Defines which Segmentation Model to use (refer to model_info.yaml for IDs).
-                        Defaults value: 6
-            
-            use_gpu: Defines whether tensor operations should be processed using the discrete GPU.
-                        Default value: False
-
-        Instance Variables:
-        ----------
-            use_gpu: Boolean
-            enc: String
-            dec: String
-
-            colours: Dict
-            names: Dict
-
-            segmentation_module: SegmentationModule object
-                        
-        Returns:
-        ----------
-            Instance of SegmentationEngine object
-        """
         self.use_gpu = use_gpu
         # Read YAML file with required config options in it:
         with open('./model_info/model_info.yaml') as f:
