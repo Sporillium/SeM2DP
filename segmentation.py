@@ -42,7 +42,7 @@ class SegmentationEngine:
     ----------
         Instance of SegmentationEngine object
     """
-    def __init__(self, model_id=6, use_gpu=False):
+    def __init__(self, model_id=1, use_gpu=False):
         self.use_gpu = use_gpu
         # Read YAML file with required config options in it:
         with open('./model_info/model_info.yaml') as f:
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     img = cv.imread("Test_Image.png")
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
-    segEngine = SegmentationEngine(model_id=1, use_gpu=False)
+    segEngine = SegmentationEngine(model_id=2, use_gpu=False)
 
     output = segEngine.segmentImageVis(img)
     dist = segEngine.segmentImageDist(img)
