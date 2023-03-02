@@ -80,7 +80,53 @@ class StereoExtractor:
 
 
     # ----- Method definitions -----
+    def noiseMatrix(self, XL, YL, XR, YR):
+        """
+        Defines a noise matrix for the x and y directions of each image
 
+        Parameters:
+        ----------
+            XL: standard deviation of the left image X noise.
+            YL: standard deviation of the left image X noise.
+            XR: standard deviation of the right image X noise.
+            YR: standard deviation of the right image Y noise.
+
+        """
+        self.N = np.array([ [XL**2, 0, 0, 0],
+                            [0, YL**2, 0, 0],
+                            [0, 0, XR**2, 0],
+                            [0, 0, 0, YR**2]])
+        
+    def measurement3DNoise(self, xl, yl, xr, yr):
+        """
+        Transforms pixel locations with added zero-mean noise in stereo rectified images into 3D coordinates with zero-mean noise
+
+        Parameters:
+        ----------
+            xl: X coordinate of left image feature.
+            yl: Y coordinate of left image feature.
+            xr: X coordinate of right image feature.
+            ye: Y coordinate of right image feature.
+
+        Returns:
+        ----------
+            mu: Numpy array containing the location of the measured mean in 3D space, in the form [X, Y, Z].
+            Q:  Numpy array containg the measurement covariance of the given point in 3D space.
+        """
+        X = (self.cam_fl*self.cam_baseline) / (xl - xr)
+        Y = -(((xl-self.cam_xoff)*self.cam_baseline)/(xl - xr) - 0.5*self.cam_baseline)
+        Z = -(((0.5*(yl+yr)-self.cam_yoff)*self.cam_baseline)/(xl-xr))
+
+        mu = np.array([X,Y,Z])
+        
+        W = np.array([  [-(self.cam_fl*self.cam_baseline)/((xl-xr)**2) , 0 , (self.cam_fl*self.cam_baseline)/((xl-xr)**2) , 0],
+                        [-(self.cam_baseline*(self.cam_xoff-xr))/((xl-xr)**2) , 0 , (self.cam_baseline*(self.cam_xoff-xl))/((xl-xr)**2) , 0],
+                        [(self.cam_baseline*(yl - 2*self.cam_yoff + yr))/(2*(xl-xr)**2) , -self.cam_baseline/(2*(xl-xr)**2) , 
+                            -(self.cam_baseline*(yl - 2*self.cam_yoff + yr))/(2*(xl-xr)**2) , -self.cam_baseline/(2*(xl-xr)**2)]])
+        
+        Q = W @ self.N @ W.T
+
+        return mu, Q
 
 # ----- Function Definitions -----
 
