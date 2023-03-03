@@ -46,6 +46,9 @@ class StereoExtractor:
         path_r: String
         poses: String
         seq_len: int
+
+        detector = Instance of OpenCV Feature detector
+        matcher = Instance of OpenCV Feature matcher
                     
     Returns:
     ----------
@@ -76,7 +79,45 @@ class StereoExtractor:
                 self.path_l = camera_info['image_path_l']
                 self.path_r = camera_info['image_path_r']
                 self.poses = camera_info['poses_path']
-                self.seq_len = camera_info['len']
+                self.seq_len = camera_info['len']    
+            f.close()
+            
+        # Define OpenCV Extractors from settings:
+        if self.detectorID == 'SIFT':
+            self.detector = cv.SIFT_create()
+        elif self.detectorID == 'SURF':
+            self.detector = xf2d.SURF_create()
+        elif self.detectorID == 'ORB':
+            self.detector = cv.ORB_create(nfeatures=1000)
+        else:
+            print("UNDEFINED FEATURE")
+            exit(code=2)
+        
+        # Define OpenCV Matchers from Settings:
+        if self.detectorID == 'SIFT' or self.detectorID == 'SURF':
+            if self.matcherID == 'BF':
+                self.matcher = cv.BFMatcher()
+            elif self.matcherID == 'NN':
+                FLANN_INDEX_KDTREE = 1
+                index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+                search_params = dict(checks=100)
+                self.matcher = cv.FlannBasedMatcher(index_params, search_params)
+
+        elif self.detectorID == 'ORB':
+            if self.matcherID == 'BF':
+                self.matcher = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
+            elif self.matcherID == 'NN':
+                FLANN_INDEX_LSH = 6
+                index_params= dict(algorithm = FLANN_INDEX_LSH,
+                                table_number = 12,
+                                key_size = 20,
+                                multi_probe_level = 2)
+                search_params = dict(checks=100) 
+                self.matcher = cv.FlannBasedMatcher(index_params, search_params)
+        else:
+            print("UNDEFINED MATCHER")
+            exit(code=2)
+    
 
 
     # ----- Method definitions -----
