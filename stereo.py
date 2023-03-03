@@ -99,7 +99,7 @@ class StereoExtractor:
                 self.matcher = cv.BFMatcher()
             elif self.matcherID == 'NN':
                 FLANN_INDEX_KDTREE = 1
-                index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+                index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
                 search_params = dict(checks=100)
                 self.matcher = cv.FlannBasedMatcher(index_params, search_params)
 
@@ -108,10 +108,10 @@ class StereoExtractor:
                 self.matcher = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
             elif self.matcherID == 'NN':
                 FLANN_INDEX_LSH = 6
-                index_params= dict(algorithm = FLANN_INDEX_LSH,
-                                table_number = 12,
-                                key_size = 20,
-                                multi_probe_level = 2)
+                index_params= dict(algorithm=FLANN_INDEX_LSH,
+                                table_number=12,
+                                key_size=20,
+                                multi_probe_level=2)
                 search_params = dict(checks=100) 
                 self.matcher = cv.FlannBasedMatcher(index_params, search_params)
         else:
@@ -168,6 +168,26 @@ class StereoExtractor:
         Q = W @ self.N @ W.T
 
         return mu, Q
+    
+    def computeRatioTest(self, matches, ratio=0.7):
+        """
+        Computes the ratios test as defined by D. Lowe in the original SIFT paper
+
+        Parameters:
+        ----------
+            matches: List of match pairs from the knn matcher
+            ratio: difference ratio needed for computing.
+                    Default value: 0.7
+            
+        Returns:
+        ----------
+            good: List of good matches after ratio test
+        """
+        good = []
+        for m,n in matches:
+            if m.distance < ratio*n.distance:
+                good.append(m)
+        return good
 
 # ----- Function Definitions -----
 
