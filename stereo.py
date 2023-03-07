@@ -118,8 +118,6 @@ class StereoExtractor:
             print("UNDEFINED MATCHER")
             exit(code=2)
     
-
-
     # ----- Method definitions -----
     def noiseMatrix(self, XL, YL, XR, YR):
         """
@@ -188,6 +186,75 @@ class StereoExtractor:
             if m.distance < ratio*n.distance:
                 good.append(m)
         return good
+    
+    def epipolarFilter(self, matches, kp_left, kp_right, filter_threshold=0.0, disp_threshold=0.5):
+        """
+        Applies a filter to point cloud based on the epipolar constraint in stereo-rectified images
+
+        Parameters:
+        ----------
+            matches: list of matched points
+            kp_left: key points from the left image
+            kp_right: key points from the right image
+            filter_threshold: Allowable tolerance for deviation in the image plane x-direction
+                                Default value: 0.0
+            disp_threshold: Allowable tolerance for deviation in the image plane y-direction
+                                Default value: 0.5
+        
+        Returns:
+        ----------
+            ret_matches: List of filtered matches
+
+        """
+        ret_matches = []
+        for mat in matches:
+            (xL, yL) = kp_left[mat.queryIdx].pt
+            (xR, yR) = kp_right[mat.trainIdx].pt
+
+            if ((xL - xR) > filter_threshold) and (abs(yL - yR) < disp_threshold):
+                ret_matches.append(mat)
+
+        return ret_matches 
+
+    def pointsFromImages(self, im_no):
+        """
+        Extracts points from pair of stereo images, filters them, and returns matched points, as well as descriptors
+
+        Parameters:
+        ----------
+            im_no: ID Number of Image to Process
+            
+        Returns:
+        ----------
+            epi_matches: List of matched points
+            kpL: keypoints from left image
+            kpR: keypoints from right image
+            desL: descriptors from left image
+            desR: descriptors from right image
+        """
+        if self.cam_name != 'kitti':
+            print("Behavior not implemented!")
+            exit()
+        else:
+            image_str = f'{im_no:06}'
+
+            imgL = cv.imread(self.path_l+image_str+".png", cv.IMREAD_UNCHANGED)
+            imgR = cv.imread(self.path_r+image_str+".png", cv.IMREAD_UNCHANGED)
+            imgL = cv.cvtColor(imgL, cv.COLOR_BGR2RGB)
+            imgR = cv.cvtColor(imgR, cv.COLOR_BGR2RGB)
+
+            kpL, desL = self.detector.detectAndCompute(imgL, None)
+            kpR, desR = self.detector.detectAndCompute(imgR, None)
+
+            if self.detectorID != 'ORB':
+                initial_matches = self.matcher.knnMatch(desL, desR)
+                initial_matches = self.computeRatioTest(initial_matches)
+            else:
+                initial_matches = self.matcher.match(desL, desR)
+            
+            epi_matches = self.epipolarFilter(initial_matches, kpL, kpR, filter_threshold=5.0)
+
+        return epi_matches, kpL, kpR, desL, desR
 
 # ----- Function Definitions -----
 
