@@ -14,7 +14,6 @@ class cloudProcessor:
         pass
 
 # Function Definitions
-
 # ----- Implementation of Umeyama's Transformation Estimation Algorithm -----
 def umeyama(src_points, dst_points):
     """
@@ -156,6 +155,25 @@ def probabilistic_outlier_removal(x, C, y, P, c, num_iters=1000, return_transfor
 
 # ----- Implementation of Brink's improved Consensus measure ------
 def prob_func_brink(x, C, y, P):
+    """
+    Function that determines the probability that two samples are of the same point. Method used by Brink (2012)
+
+    Parameters:
+    ---------
+        x: (1, M) vector
+            A M-dimensional mean vector for sample 1
+        C: (M, M) array
+            MxM Covariance Matrix for sample 1
+        y: (1, M) array
+            A M-dimensional mean vector for sample 2
+        P: (M, M) array
+            MxM Covariance Matrix for sample 2
+
+    Returns:
+    ---------
+        prob: float
+            Probability that x and y are measurements of the same point
+    """
     C_inv = np.linalg.inv(C)
     C_det = np.linalg.det(C)
 
@@ -171,12 +189,31 @@ def prob_func_brink(x, C, y, P):
 
     s = s_1 + s_2 - s_3
 
-    p = ( ( np.sqrt(C_det)*np.sqrt(P_det)) / np.sqrt(cov_det)) * np.exp(-0.5*s)
+    prob = ( ( np.sqrt(C_det)*np.sqrt(P_det)) / np.sqrt(cov_det)) * np.exp(-0.5*s)
 
-    return p
+    return prob
 
 # ----- Implementation of Chiu's Improved Consensus measure ------
 def prob_func_chiu(x, C, y, P):
+    """
+    Function that determines the probability that two samples are of the same point. Method used by Chiu (2017)
+
+    Parameters:
+    ---------
+        x: (1, M) vector
+            A M-dimensional mean vector for sample 1
+        C: (M, M) array
+            MxM Covariance Matrix for sample 1
+        y: (1, M) array
+            A M-dimensional mean vector for sample 2
+        P: (M, M) array
+            MxM Covariance Matrix for sample 2
+
+    Returns:
+    ---------
+        prob: float
+            Probability that x and y are measurements of the same point
+    """
     cov = C + P
     cov_inv = np.linalg.inv(cov)
     cov_det = np.linalg.det(cov)
@@ -191,6 +228,25 @@ def prob_func_chiu(x, C, y, P):
 
 # ----- Implementation of Chiu's Improved Consensus measure Neg Log Likelyhood ------
 def prob_func_chiu_log(x, C, y, P):
+    """
+    Function that determines the negative log likelihood that two samples are of the same point. Method used by Chiu (2017)
+
+    Parameters:
+    ---------
+        x: (1, M) vector
+            A M-dimensional mean vector for sample 1
+        C: (M, M) array
+            MxM Covariance Matrix for sample 1
+        y: (1, M) array
+            A M-dimensional mean vector for sample 2
+        P: (M, M) array
+            MxM Covariance Matrix for sample 2
+
+    Returns:
+    ---------
+        meas: float
+            Probability that x and y are measurements of the same point, expressed as a negative log likelihood
+    """
     cov = C + P
     cov_inv = np.linalg.inv(cov)
     cov_det = np.linalg.det(cov)
