@@ -10,8 +10,11 @@ PROBABILITY_THRESHOLD = 5
 
 # Class Definitions
 class cloudProcessor:
-    def __init__(self) -> None:
-        pass
+    def __init__(self):
+        self.cloud = None
+
+    def loadCloud(self, base_cloud):
+        self.cloud = base_cloud
 
 # Function Definitions
 # ----- Implementation of Umeyama's Transformation Estimation Algorithm -----
