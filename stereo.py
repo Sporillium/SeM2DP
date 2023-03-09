@@ -255,6 +255,48 @@ class StereoExtractor:
             epi_matches = self.epipolarFilter(initial_matches, kpL, kpR, filter_threshold=5.0)
 
         return epi_matches, kpL, kpR, desL, desR
+    
+    def semanticsFromImages(self, im_no, segmentation_engine, show_seg=False):
+        """
+        Extracts semantic distributions from pair of stereo images, and then returns the full class distributions
+
+        Parameters:
+        ----------
+            im_no: ID Number of Image to Process
+            segmentation_engine: Object that can process the semantic segmentation
+            show_seg: Flag to display the segmentation results
+                    Default value: False
+        Returns:
+        ----------
+            distL: Distribution tensor of left image
+            distR: Distribution tensor of right image
+        """
+        if self.cam_name != 'kitti':
+            print("Behavior not implemented!")
+            exit()
+        else:
+            image_str = f'{im_no:06}'
+
+            imgL = cv.imread(self.path_l+image_str+".png", cv.IMREAD_UNCHANGED)
+            imgR = cv.imread(self.path_r+image_str+".png", cv.IMREAD_UNCHANGED)
+            imgL = cv.cvtColor(imgL, cv.COLOR_BGR2RGB)
+            imgR = cv.cvtColor(imgR, cv.COLOR_BGR2RGB)
+
+            imgL_proc = cv.GaussianBlur(imgL, (5,5), 0)
+            imgR_proc = cv.GaussianBlur(imgR, (5,5), 0)
+
+            # segment images and get the correct outputs:
+            distL = segmentation_engine.segmentImageDist(imgL_proc)
+            distR = segmentation_engine.segmentImageDist(imgR_proc)
+
+            if show_seg: # Display segmentation results
+                visL = segmentation_engine.segmentImageVis(imgL_proc)
+                visL = cv.cvtColor(visL, cv.COLOR_BGR2RGB)
+                cv.imshow("Left Image Segmentation", visL)
+                cv.waitKey(0)
+                cv.destroyAllWindows()
+
+            return distL, distR
 
 # ----- Function Definitions -----
 
