@@ -4,12 +4,17 @@
 import cv2 as cv
 from cv2 import xfeatures2d as xf2d
 import numpy as np
-import random
 import yaml
 from yaml.loader import SafeLoader
 
 # Required parameters and constants
-
+FIXED_BLUR = np.array([ [0.0023997,  0.00590231, 0.01012841, 0.0121259,  0.01012841, 0.00590231, 0.0023997 ],
+                        [0.00590231, 0.01451734, 0.02491186, 0.02982491, 0.02491186, 0.01451734, 0.00590231],
+                        [0.01012841, 0.02491186, 0.04274892, 0.05117975, 0.04274892, 0.02491186, 0.01012841],
+                        [0.0121259,  0.02982491, 0.05117975, 0.06127329, 0.05117975, 0.02982491, 0.0121259 ],
+                        [0.01012841, 0.02491186, 0.04274892, 0.05117975, 0.04274892, 0.02491186, 0.01012841],
+                        [0.00590231, 0.01451734, 0.02491186, 0.02982491, 0.02491186, 0.01451734, 0.00590231],
+                        [0.0023997,  0.00590231, 0.01012841, 0.0121259,  0.01012841, 0.00590231, 0.0023997 ]])
 
 # ----- Class Definitions -----
 class StereoExtractor:
@@ -204,7 +209,6 @@ class StereoExtractor:
         Returns:
         ----------
             ret_matches: List of filtered matches
-
         """
         ret_matches = []
         for mat in matches:
@@ -297,6 +301,116 @@ class StereoExtractor:
                 cv.destroyAllWindows()
 
             return distL, distR
+    
+    def semanticFilter(self, matches, kp_left, kp_right, dist_l, dist_r, filter_threshold=0.5):
+        """
+        Applies a filter to point cloud based on semantic similarity between the left and right points
+
+        Parameters:
+        ----------
+            matches: list of matched points
+            kp_left: key points from the left image
+            kp_right: key points from the right image
+            dist_l: semantic distribution from the left image
+            dist_r: semantic distribution from the right image
+            filter_threshold: Allowable tolerance for KL Divergence between points
+                                Default value: 0.5
+        
+        Returns:
+        ----------
+            ret_matches: List of filtered matches
+            left_locs: List of feature locations in left image
+            right_locs: List of feature locations in right image
+            left_dists: List of feature distributions in left image
+            right_dists: List of feature distributions in right image
+
+        """
+        ret_matches = []
+        left_locs = []
+        left_dists = []
+        right_locs = []
+        right_dists = []
+        for mat in matches:
+            feat_l = kp_left[mat.queryIdx]
+            feat_r = kp_right[mat.trainIdx]
+
+            pd_l = self.computeFeatureDist(feat_l, dist_l)
+            pd_r = self.computeFeatureDist(feat_r, dist_r)
+
+            div = self.fastKLDiv(pd_l, pd_r)
+            if div < filter_threshold:
+                ret_matches.append(mat)
+                left_locs.append(feat_l.pt)
+                left_dists.append(pd_l)
+                right_locs.append(feat_r.pt)
+                right_dists.append(pd_r)
+        
+        return ret_matches, left_locs, right_locs, left_dists, right_dists
+        
+    def fastKLDiv(self, p, q):
+        """
+        Computes the Symmetrised Kullback-Liebler Divergence between two semantic distributions
+
+        Parameters:
+        ----------
+            p: distribution 1
+            q: distribution 2
+        
+        Returns:
+        ----------
+            Symmetrised KL Divergence of p and q
+        """
+        divP = np.multiply(np.log(np.divide(p,q)),p).sum()
+        divQ = np.multiply(np.log(np.divide(q,p)),q).sum()
+
+        return divP + divQ
+    
+    def computeFeatureDist(self, feat, dist):
+        """
+        Approximates the region of semantic information around a point as a single distribution over the given classes
+
+        Parameters:
+        ----------
+            feat: OpenCV Image feature object
+            dist: Full Pixel-wise semantic distribution over the whole image
+        
+        Returns:
+        ----------
+            retDist: Normalised distribution vector for the point measurement
+        """
+        (x, y) = feat.pt
+        x = np.int16(x)
+        y = np.int16(y)
+        x_range = [x-3, x+4]
+        y_range = [y-3, y+4]
+        
+        retDist = np.zeros(150)
+
+        if(x_range[0] < 0 or x_range[1] > dist.shape[2]):
+            return retDist
+        elif(y_range[0] < 0 or y_range[1] > dist.shape[1]):
+            return retDist
+        else:
+            dist_slice = dist[:, y_range[0]:y_range[1], x_range[0]:x_range[1]]
+            retDist = np.tensordot(dist_slice, FIXED_BLUR, axes=((1,2),(0,1)))
+            return self.normalizeVect(retDist)
+    
+    def normalizeVect(self, vect):
+        """
+        Normalises a vector
+
+        Parameters:
+        ----------
+            vect: input vector
+        
+        Returns:
+        ----------
+            mat: Normalised vector
+        """
+        matSum = np.sum(vect)
+        mat = vect/matSum
+        return mat
+
 
 # ----- Function Definitions -----
 
