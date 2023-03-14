@@ -9,7 +9,7 @@ SCALE_THRESHOLD = 0.99
 PROBABILITY_THRESHOLD = 5
 
 # Class Definitions
-class cloudProcessor:
+class CloudProcessor:
     def __init__(self, stereo_extractor):
         self.stereo_extractor = stereo_extractor
         self.cloud = None
@@ -49,15 +49,62 @@ class cloudProcessor:
             dist = left_dist[i]
 
             mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
-            point = measuredPoint(mean, cov, sem_dist=dist, left_desc=descL, right_desc=descR)
+            point = MeasuredPoint(mean, cov, sem_dist=dist, left_desc=descL, right_desc=descR)
             points.append(point)
+        
+        if filter_unclear_classes:
+            points = self.stereo_extractor.excludeUncertainLabels(points)
+        
+        if filter_dynamic_classes:
+            points = self.stereo_extractor.excludeDynamicLabels(points)
+        
+        return points
 
-class measuredPoint:
+class MeasuredPoint:
+    """
+    Initialises a measuredPoint Object, which stores information about the 3D position and classes of points extracted from stereo images.
+
+    Parameters:
+    ----------
+        mean (vector): Mean location of point
+
+        cov (matrix): Covariance of measured point location
+
+        sem_dist (vector): Semantic distribution over the classes for the point
+            Default value: None
+
+        left_descriptor: Descriptor of the point component of the left image point
+            Default value: None
+
+        right_descriptor: Descriptor of the point component of the right image point
+            Default value: None 
+
+    Instance Variables:
+    ----------
+        mean: Vector
+        cov: Matrix
+
+        sem_dist: Vector
+        label: Int
+        
+        desc_l: Descriptor
+        desc_r: Descriptor
+
+        location: Vector
+        location_cov: Matrix
+        
+        frame_num: Int
+        cluster: Int
+               
+    Returns:
+    ----------
+        Instance of MeasuredPoint object
+    """
     def __init__(self, mean, cov, sem_dist=None, left_descriptor=None, right_descriptor=None):
         self.mean = mean
         self.cov = cov
-        self.label = np.argmax(sem_dist) if sem_dist is not None else None
         self.sem_dist = sem_dist
+        self.label = np.argmax(sem_dist) if sem_dist is not None else None
         self.desc_l = left_descriptor
         self.desc_r = right_descriptor
         self.location = mean
