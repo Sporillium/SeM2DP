@@ -10,11 +10,65 @@ PROBABILITY_THRESHOLD = 5
 
 # Class Definitions
 class cloudProcessor:
-    def __init__(self):
+    def __init__(self, stereo_extractor):
+        self.stereo_extractor = stereo_extractor
         self.cloud = None
 
     def loadCloud(self, base_cloud):
         self.cloud = base_cloud
+    
+    def processFrame(self, img, filter_unclear_classes=True, filter_dynamic_classes=False):
+        """
+        Extracts semantic features and computes 3D Point clouds for a single frame of an input stereo image
+
+        Parameters:
+        ----------
+            img (int): ID of image/frame to process
+            filter_unclear_classes (Boolean): Flag for filtering unclear or unmeasurable class points from the point cloud. 
+                Default value: True
+            filter_dynamic_classes (Boolean): Flag for filtering points on potentially dynamic objects from the point cloud.
+                Default value: False
+        
+        Returns:
+        ----------
+            points (list): A list of extracted 3D Semantic points
+        """
+        distL, distR = self.stereo_extractor.semanticsFromImages(img)
+        epi_mat, kpL, kpR, desL, desR = self.stereo_extractor.pointsFromImages(img)
+        sem_mat, left_dist, right_dist = self.stereo_extractor.semanticFilter(epi_mat, kpL, kpR, distL, distR)
+
+        points = []
+        for mat, i in zip(sem_mat, range(len(sem_mat))):
+            featL = kpL[mat.queryIdx]
+            featR = kpR[mat.trainIdx]
+            descL = desL[mat.queryIdx]
+            descR = desR[mat.trainIdx]
+
+            (xl, yl) = featL.pt
+            (xr, yr) = featR.pt
+            dist = left_dist[i]
+
+            mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
+            point = measuredPoint(mean, cov, sem_dist=dist, left_desc=descL, right_desc=descR)
+            points.append(point)
+
+class measuredPoint:
+    def __init__(self, mean, cov, sem_dist=None, left_descriptor=None, right_descriptor=None):
+        self.mean = mean
+        self.cov = cov
+        self.label = np.argmax(sem_dist) if sem_dist is not None else None
+        self.sem_dist = sem_dist
+        self.desc_l = left_descriptor
+        self.desc_r = right_descriptor
+        self.location = mean
+        self.location_cov = cov
+        self.frame_num = None
+        self.cluster = None
+    
+    def transformLocation(self, transform):
+        self.location = (transform[:, 0:3].T @ self.location) + transform[:, 3]
+        self.location_cov = transform[:, 0:3].T @ self.location_cov @ transform[:, 0:3]
+
 
 # Function Definitions
 # ----- Implementation of Umeyama's Transformation Estimation Algorithm -----
