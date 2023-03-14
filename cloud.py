@@ -59,6 +59,86 @@ class CloudProcessor:
             points = self.stereo_extractor.excludeDynamicLabels(points)
         
         return points
+    
+    def process_pose_change(self, prev_cloud, curr_cloud):
+        """
+        Estimates the pose change between two consecutive images in a sequence of stereo images
+
+        Parameters:
+        ----------
+            prev_cloud (list): List of points in the point cloud from the previous time step
+            curr_cloud (list): List of points in the point cloud from the current time step
+        
+        Returns:
+        ----------
+            R_best (matrix): Rotation Matrix that best fits the point correspondences
+            t_best (vector): Translation vector that best fits the point correspondences
+            non_corres_points (list): List of points with no corresponding points
+        """
+        des_L_prev = [point.desc_l for point in prev_cloud]
+        des_R_prev = [point.desc_r for point in prev_cloud]
+
+        des_L_curr = [point.desc_l for point in curr_cloud]
+        des_R_curr = [point.desc_r for point in curr_cloud]
+
+        x_bar = [point.mean for point in prev_cloud]
+        y_bar = [point.mean for point in curr_cloud]
+
+        C = [point.cov for point in prev_cloud]
+        P = [point.cov for point in curr_cloud]
+
+        if self.stereo_extractor.detectorID != 'ORB':
+            initial_matches_L = self.stereo_extractor.matcher.knnMatch(np.asarray(des_L_prev), np.asarray(des_L_curr))
+            initial_matches_R = self.stereo_extractor.matcher.knnMatch(np.asarray(des_R_prev), np.asarray(des_R_curr))
+
+            initial_matches_L = self.stereo_extractor.computeRatioTest(initial_matches_L)
+            initial_matches_R = self.stereo_extractor.computeRatioTest(initial_matches_R)
+        else:
+            initial_matches_L = self.stereo_extractor.matcher.match(np.asarray(des_L_prev), np.asarray(des_L_curr))
+            initial_matches_R = self.stereo_extractor.matcher.match(np.asarray(des_R_prev), np.asarray(des_R_curr))
+        
+        corres_L = np.zeros(len(des_L_prev))
+        corres_R = np.zeros(len(des_R_prev))
+        final_corr = np.zeros(min(len(des_L_prev), len(des_R_prev)))
+
+        for matL in initial_matches_L:
+                corres_L[matL.queryIdx] = matL.trainIdx
+        for matR in initial_matches_R:
+                corres_R[matR.queryIdx] = matR.trainIdx
+        
+        for i in range(len(final_corr)):
+            if len(final_corr == len(des_L_prev)):
+                final_corr[i] = corres_L[i] if np.equal(corres_L, corres_R)[i] else 0
+            else:
+                final_corr[i] = corres_R[i] if np.equal(corres_L, corres_R)[i] else 0
+
+        c_best, R_best, T_best = probabilistic_outlier_removal(np.asarray(x_bar), np.asarray(C), np.asarray(y_bar), np.asarray(P), np.asarray(final_corr, dtype=np.int0), num_iters=1000)
+        ii = np.where(c_best == 0)[0]
+        non_corres_points = [prev_cloud[i] for i in ii]
+
+        return np.column_stack((R_best, T_best.T)), non_corres_points
+
+    def create_point_cloud(self, cloud_list, new_points, transform=None):
+        """
+        Extends point cloud with new points, and allows for transforming of points to new locations
+
+        Parameters:
+        ----------
+            cloud_list (list): Main point cloud
+            new_points (list): List of points to be added to the point cloud
+            transform (Matrix): Transformation matrix to transform new points to a different location
+                Default value: None
+        
+        Returns:
+        ----------
+            None
+        """
+
+        cloud_list.extend(new_points)
+        if transform is not None:
+            for point in cloud_list:
+                point.transformLocation(transform)
+        
 
 class MeasuredPoint:
     """
