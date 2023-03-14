@@ -16,6 +16,11 @@ FIXED_BLUR = np.array([ [0.0023997,  0.00590231, 0.01012841, 0.0121259,  0.01012
                         [0.00590231, 0.01451734, 0.02491186, 0.02982491, 0.02491186, 0.01451734, 0.00590231],
                         [0.0023997,  0.00590231, 0.01012841, 0.0121259,  0.01012841, 0.00590231, 0.0023997 ]])
 
+DYNAMIC_CLASSES = [12, 20, 76, 80, 83, 90, 102, 103, 116, 127] # Dynamic Object Classes
+                    #[Person, Car, Boat, Bus, Truck, Airplane, Van, Ship, Motorbike, Bicycle]
+UNCLEAR_CLASSES = [2] # Classes that present non-fixed values
+                    #[Sky]
+
 # ----- Class Definitions -----
 class StereoExtractor:
     """
@@ -23,9 +28,11 @@ class StereoExtractor:
 
     Parameters:
     ----------
+        seg_engine: Segmentation_Engine object that performs semantic segmentation on the stereo images
+
         detector: Specifies which 2D feature extractor to use for extracting features from the 2D images. Options include SIFT, SURF, and ORB.
                     Default value: 'SIFT'
-        
+
         matcher: Specifies which method to use to match extracted features from the left and right images. Options are brute force (BF) or FLANN (NN).
                     Default value: 'BF'
         
@@ -37,6 +44,8 @@ class StereoExtractor:
 
     Instance Variables:
     ----------
+        seg_engine: SegmentationEngine Object
+
         detector_id: String
         matcher_id: String
         camera_id: int
@@ -59,7 +68,9 @@ class StereoExtractor:
     ----------
         Instance of Stereo Extractor object object
     """
-    def __init__(self, detector='SIFT', matcher='BF', camera_id=0, seq=None):
+    def __init__(self, seg_engine, detector='SIFT', matcher='BF', camera_id=0, seq=None):
+        self.seg_engine = seg_engine
+
         self.detectorID = detector
         self.matcherID = matcher
         self.camera_id = camera_id
@@ -260,7 +271,7 @@ class StereoExtractor:
 
         return epi_matches, kpL, kpR, desL, desR
     
-    def semanticsFromImages(self, im_no, segmentation_engine, show_seg=False):
+    def semanticsFromImages(self, im_no, show_seg=False):
         """
         Extracts semantic distributions from pair of stereo images, and then returns the full class distributions
 
@@ -290,11 +301,11 @@ class StereoExtractor:
             imgR_proc = cv.GaussianBlur(imgR, (5,5), 0)
 
             # segment images and get the correct outputs:
-            distL = segmentation_engine.segmentImageDist(imgL_proc)
-            distR = segmentation_engine.segmentImageDist(imgR_proc)
+            distL = self.seg_engine.segmentImageDist(imgL_proc)
+            distR = self.seg_engine.segmentImageDist(imgR_proc)
 
             if show_seg: # Display segmentation results
-                visL = segmentation_engine.segmentImageVis(imgL_proc)
+                visL = self.seg_engine.segmentImageVis(imgL_proc)
                 visL = cv.cvtColor(visL, cv.COLOR_BGR2RGB)
                 cv.imshow("Left Image Segmentation", visL)
                 cv.waitKey(0)
@@ -326,9 +337,7 @@ class StereoExtractor:
 
         """
         ret_matches = []
-        left_locs = []
         left_dists = []
-        right_locs = []
         right_dists = []
         for mat in matches:
             feat_l = kp_left[mat.queryIdx]
@@ -340,12 +349,10 @@ class StereoExtractor:
             div = self.fastKLDiv(pd_l, pd_r)
             if div < filter_threshold:
                 ret_matches.append(mat)
-                left_locs.append(feat_l.pt)
                 left_dists.append(pd_l)
-                right_locs.append(feat_r.pt)
                 right_dists.append(pd_r)
         
-        return ret_matches, left_locs, right_locs, left_dists, right_dists
+        return ret_matches, left_dists, right_dists
         
     def fastKLDiv(self, p, q):
         """
@@ -411,6 +418,24 @@ class StereoExtractor:
         mat = vect/matSum
         return mat
 
+    def excludeClassLabels(self, points, labels):
+        """
+        Removes points of with specific class labels from list of points
+
+        Parameters:
+        ----------
+            points: list of unfiltered points
+            labels: list of labels to exclude
+        
+        Returns:
+        ----------
+            filtered_points: list of points with specific labels removed
+        """
+        filtered_points = []
+        for point in points:
+            if point.label not in labels:
+                filtered_points.append(point)
+        return filtered_points
 
 # ----- Function Definitions -----
 
