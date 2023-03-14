@@ -418,7 +418,7 @@ class StereoExtractor:
         mat = vect/matSum
         return mat
 
-    def excludeClassLabels(self, points, labels):
+    def excludeDynamicLabels(self, points):
         """
         Removes points of with specific class labels from list of points
 
@@ -433,7 +433,26 @@ class StereoExtractor:
         """
         filtered_points = []
         for point in points:
-            if point.label not in labels:
+            if point.label not in DYNAMIC_CLASSES:
+                filtered_points.append(point)
+        return filtered_points
+    
+    def excludeUncertainLabels(self, points):
+        """
+        Removes points of with specific class labels from list of points
+
+        Parameters:
+        ----------
+            points: list of unfiltered points
+            labels: list of labels to exclude
+        
+        Returns:
+        ----------
+            filtered_points: list of points with specific labels removed
+        """
+        filtered_points = []
+        for point in points:
+            if point.label not in UNCLEAR_CLASSES:
                 filtered_points.append(point)
         return filtered_points
 
