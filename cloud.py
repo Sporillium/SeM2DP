@@ -35,6 +35,10 @@ class CloudProcessor:
         """
         distL, distR = self.stereo_extractor.semanticsFromImages(img)
         epi_mat, kpL, kpR, desL, desR = self.stereo_extractor.pointsFromImages(img)
+
+        #print(type(distL))
+        #print(distL.shape)
+
         sem_mat, left_dist, right_dist = self.stereo_extractor.semanticFilter(epi_mat, kpL, kpR, distL, distR)
 
         points = []
@@ -88,8 +92,8 @@ class CloudProcessor:
         P = [point.cov for point in curr_cloud]
 
         if self.stereo_extractor.detectorID != 'ORB':
-            initial_matches_L = self.stereo_extractor.matcher.knnMatch(np.asarray(des_L_prev), np.asarray(des_L_curr))
-            initial_matches_R = self.stereo_extractor.matcher.knnMatch(np.asarray(des_R_prev), np.asarray(des_R_curr))
+            initial_matches_L = self.stereo_extractor.matcher.knnMatch(np.asarray(des_L_prev), np.asarray(des_L_curr), 2)
+            initial_matches_R = self.stereo_extractor.matcher.knnMatch(np.asarray(des_R_prev), np.asarray(des_R_curr), 2)
 
             initial_matches_L = self.stereo_extractor.computeRatioTest(initial_matches_L)
             initial_matches_R = self.stereo_extractor.computeRatioTest(initial_matches_R)
