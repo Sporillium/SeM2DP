@@ -82,6 +82,7 @@ class SegmentationEngine:
         if self.use_gpu:
             self.segmentation_module.cuda()
 
+        print(model_data['enc_arch'], model_data['dec_arch'])
 
     # ----- Method Definitions -----
     def visualise_result(self, img, pred, index=None):
