@@ -18,7 +18,7 @@ L = 8 # Number of concentric circles [l^2r, (l-1)^2r ... 2^2r, r] default 8
 T = 16 # Number of bins per circle default 16
 
 A = np.zeros((P*Q, T*L))
-print(A.shape)
+#print(A.shape)
 
 class m2dp:
     # Constructor
@@ -363,14 +363,14 @@ class m2dp:
         
         #print(A)
         u, s, vh = np.linalg.svd(A)
-        print(u.shape)
+        #print(u.shape)
         #print(u)
-        print("\n\n")
-        print(vh.shape)
+        #print("\n\n")
+        #print(vh.shape)
         #print(vh)
-        print("\n\n")
+        #print("\n\n")
         d = np.concatenate((u.T[0,:], vh[0,:])).T
-        print(d.shape)
+        #print(d.shape)
         return d
     
     def extractAndProcess(self, point_cloud):
