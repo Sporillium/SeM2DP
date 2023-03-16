@@ -71,6 +71,8 @@ class StereoExtractor:
     def __init__(self, seg_engine, detector='SIFT', matcher='BF', camera_id=0, seq=None):
         self.seg_engine = seg_engine
 
+        self.N = noiseMatrix(1, 1, 1, 1)
+
         self.detectorID = detector
         self.matcherID = matcher
         self.camera_id = camera_id
@@ -136,23 +138,6 @@ class StereoExtractor:
             exit(code=2)
     
     # ----- Method definitions -----
-    def noiseMatrix(self, XL, YL, XR, YR):
-        """
-        Defines a noise matrix for the x and y directions of each image
-
-        Parameters:
-        ----------
-            XL: standard deviation of the left image X noise.
-            YL: standard deviation of the left image X noise.
-            XR: standard deviation of the right image X noise.
-            YR: standard deviation of the right image Y noise.
-
-        """
-        self.N = np.array([ [XL**2, 0, 0, 0],
-                            [0, YL**2, 0, 0],
-                            [0, 0, XR**2, 0],
-                            [0, 0, 0, YR**2]])
-        
     def measurement3DNoise(self, xl, yl, xr, yr):
         """
         Transforms pixel locations with added zero-mean noise in stereo rectified images into 3D coordinates with zero-mean noise
@@ -263,7 +248,7 @@ class StereoExtractor:
             kpR, desR = self.detector.detectAndCompute(imgR, None)
 
             if self.detectorID != 'ORB':
-                initial_matches = self.matcher.knnMatch(desL, desR)
+                initial_matches = self.matcher.knnMatch(desL, desR, 2)
                 initial_matches = self.computeRatioTest(initial_matches)
             else:
                 initial_matches = self.matcher.match(desL, desR)
@@ -458,7 +443,24 @@ class StereoExtractor:
         return filtered_points
 
 # ----- Function Definitions -----
+def noiseMatrix(XL, YL, XR, YR):
+    """
+    Defines a noise matrix for the x and y directions of each image
 
+    Parameters:
+    ----------
+        XL: standard deviation of the left image X noise.
+        YL: standard deviation of the left image X noise.
+        XR: standard deviation of the right image X noise.
+        YR: standard deviation of the right image Y noise.
+
+    """
+    N = np.array([  [XL**2, 0, 0, 0],
+                    [0, YL**2, 0, 0],
+                    [0, 0, XR**2, 0],
+                    [0, 0, 0, YR**2]])
+    return N
+        
 
 # Code if executed as main
 
