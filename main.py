@@ -12,13 +12,14 @@ import cv2 as cv
 from tqdm import trange
 
 # Define Execution flags:
-SHOW_POSE_ESTIMATE = True
+SHOW_POSE_ESTIMATE = False
 
 # ----- Main Execution Starts here -----
 # Load processing objects:
 segmentation_engine = seg.SegmentationEngine(model_id=6, use_gpu=False)
 stereo_extractor = stereo.StereoExtractor(segmentation_engine, detector='SIFT', matcher='BF', camera_id=0, seq=0)
 cloud_engine = cloud.CloudProcessor(stereo_extractor)
+signature_generator = m2dp.m2dp()
 
 # Load Pose File:
 try: 
@@ -40,6 +41,9 @@ point_cloud = []
 single_frames[IM_START] = cloud_engine.processFrame(IM_START)
 for point in single_frames[IM_START]:
     point.frame_num = IM_START
+
+signature = signature_generator.extractAndProcess(single_frames[IM_START])
+print(signature)
 
 # Evaluate Pose estimates from points in the frame
 if SHOW_POSE_ESTIMATE:
@@ -85,5 +89,8 @@ print("The Maximum 'Volume' is {}\nThe Minimum 'Volume' is {}".format(np.max(vol
 ii = np.where(volumes < volume_thresh)[0]
 filtered_cloud = [point_cloud[i] for i in ii]
 print("Total Points in Filtered Point Cloud: {}\n".format(len(filtered_cloud)))
+
+#signature = signature_generator.extractAndProcess(filtered_cloud)
+#print(signature)
 
 print("COMPLETED")
