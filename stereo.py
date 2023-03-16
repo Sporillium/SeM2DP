@@ -20,7 +20,7 @@ DYNAMIC_CLASSES = [12, 20, 76, 80, 83, 90, 102, 103, 116, 127] # Dynamic Object 
                     #[Person, Car, Boat, Bus, Truck, Airplane, Van, Ship, Motorbike, Bicycle]
 UNCLEAR_CLASSES = [2] # Classes that present non-fixed values
                     #[Sky]
-
+np.seterr(all='raise')
 # ----- Class Definitions -----
 class StereoExtractor:
     """
@@ -332,6 +332,9 @@ class StereoExtractor:
             pd_l = self.computeFeatureDist(feat_l, dist_l)
             pd_r = self.computeFeatureDist(feat_r, dist_r)
 
+            if pd_l.sum() == 0 or pd_r.sum()==0:
+                continue
+
             div = self.fastKLDiv(pd_l, pd_r)
             if div < filter_threshold:
                 ret_matches.append(mat)
@@ -353,9 +356,18 @@ class StereoExtractor:
         ----------
             Symmetrised KL Divergence of p and q
         """
-        divP = np.multiply(np.log(np.divide(p,q)),p).sum()
-        divQ = np.multiply(np.log(np.divide(q,p)),q).sum()
+        divP = 0.0
+        divQ = 0.0
+        try:
+            divP += np.multiply(np.log(np.divide(p,q)),p).sum()
+        except:
+            print("Q Error", q)
 
+        try:
+            divQ += np.multiply(np.log(np.divide(q,p)),q).sum()
+        except:
+            print("P Error", p)
+        
         return divP + divQ
     
     def computeFeatureDist(self, feat, dist):
@@ -380,8 +392,10 @@ class StereoExtractor:
         retDist = np.zeros(150)
 
         if(x_range[0] < 0 or x_range[1] > dist.shape[2]):
+            #print("X out of range", x_range[0], x_range[1])
             return retDist
         elif(y_range[0] < 0 or y_range[1] > dist.shape[1]):
+            #print("Y out of Range", y_range[0], y_range[1])
             return retDist
         else:
             dist_slice = dist[:, y_range[0]:y_range[1], x_range[0]:x_range[1]]
