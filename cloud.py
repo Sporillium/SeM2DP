@@ -49,7 +49,7 @@ class CloudProcessor:
             dist = left_dist[i]
 
             mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
-            point = MeasuredPoint(mean, cov, sem_dist=dist, left_desc=descL, right_desc=descR)
+            point = MeasuredPoint(mean, cov, sem_dist=dist, left_descriptor=descL, right_descriptor=descR)
             points.append(point)
         
         if filter_unclear_classes:
@@ -60,7 +60,7 @@ class CloudProcessor:
         
         return points
     
-    def process_pose_change(self, prev_cloud, curr_cloud):
+    def processPoseChange(self, prev_cloud, curr_cloud):
         """
         Estimates the pose change between two consecutive images in a sequence of stereo images
 
