@@ -76,7 +76,8 @@ class StereoExtractor:
         self.camera_id = camera_id
 
         with open('./model_info/camera_info.yaml') as f:
-            camera_info = yaml.load(f, Loader=SafeLoader)[camera_id]
+            cameras = yaml.load(f, Loader=SafeLoader)['ID']
+            camera_info = cameras[camera_id]
 
             self.cam_name = camera_info['name']
             self.cam_baseline = camera_info['baseline']
@@ -86,7 +87,7 @@ class StereoExtractor:
             
             if self.cam_name == 'kitti': # Check for Kitti Dataset and load correct sequence info
                 sequences = camera_info['seq_id']
-                len = camera_info['len']
+                len = camera_info['seq_len']
                 self.path_l = camera_info['image_path']+sequences[seq]+'image_2/'
                 self.path_r = camera_info['image_path']+sequences[seq]+'image_3/'
                 self.poses = camera_info['poses_path']+f'{seq:02}'+'.txt'
@@ -95,7 +96,7 @@ class StereoExtractor:
                 self.path_l = camera_info['image_path_l']
                 self.path_r = camera_info['image_path_r']
                 self.poses = camera_info['poses_path']
-                self.seq_len = camera_info['len']    
+                self.seq_len = camera_info['seq_len']    
             f.close()
             
         # Define OpenCV Extractors from settings:
