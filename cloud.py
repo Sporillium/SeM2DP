@@ -112,13 +112,16 @@ class CloudProcessor:
             else:
                 final_corr[i] = corres_R[i] if np.equal(corres_L, corres_R)[i] else 0
 
-        c_best, R_best, T_best = probabilistic_outlier_removal(np.asarray(x_bar), np.asarray(C), np.asarray(y_bar), np.asarray(P), np.asarray(final_corr, dtype=np.int0), num_iters=1000)
+        c_best, R_best, T_best = probabilistic_outlier_removal(np.asarray(x_bar), np.asarray(C), 
+                                                               np.asarray(y_bar), np.asarray(P), 
+                                                               np.asarray(final_corr, dtype=np.int0), 
+                                                               prob_func_chiu_log, num_iters=1000)
         ii = np.where(c_best == 0)[0]
         non_corres_points = [prev_cloud[i] for i in ii]
 
         return np.column_stack((R_best, T_best.T)), non_corres_points
 
-    def create_point_cloud(self, cloud_list, new_points, transform=None):
+    def merge_point_cloud(self, cloud_list, new_points, transform=None):
         """
         Extends point cloud with new points, and allows for transforming of points to new locations
 
@@ -271,7 +274,7 @@ def umeyama(src_points, dst_points):
     return R, T, c
 
 # ----- Implementation of Brink's Probabilistic Outlier Removal -----
-def probabilistic_outlier_removal(x, C, y, P, c, num_iters=1000, return_transform='True'):
+def probabilistic_outlier_removal(x, C, y, P, c, prob_func, num_iters=1000, return_transform=True):
     """
     Modified Implementation of RANSAC that makes use of Probabilistic associations between random samples
 
@@ -289,11 +292,22 @@ def probabilistic_outlier_removal(x, C, y, P, c, num_iters=1000, return_transfor
             List containing correspondences between x and y, such that if c[i] = j,
             x[i] = y[j]. An entry of 0 indicates that there is no match for that
             specific point in x.
+        prob_func: Function Object
+            Chosen probability function for computing inlier association probability
+        num_iters: Int
+            Number of iterations to process, defaults to 1000
+        return_transform: Boolean
+            Flag to return the rotation matrix R and translation vector t corresponding
+            to the best match from the outlier removal step. Defaults to True
 
     Returns:
     ---------
         c_best: (N, 1) array
             List containing correspondences from model containing the most inlier points
+        R_best: (N, N) matrix
+            Rotation matrix corresponding to best inlier count
+        t_best: (N, 1) array
+            Translation vector corresponding to best inlier count
     """
     best_inlier_count = 0
     c_best = None
@@ -320,7 +334,7 @@ def probabilistic_outlier_removal(x, C, y, P, c, num_iters=1000, return_transfor
                 if j > 0:
                     x_temp = (R @ x[i]) + T
                     C_temp = R @ C[i] @ R.T
-                    p = prob_func_chiu_log(x_temp, C_temp, y[j], P[j])
+                    p = prob_func(x_temp, C_temp, y[j], P[j])
                     if p < PROBABILITY_THRESHOLD:
                         inlier_count += 1
                     else:
