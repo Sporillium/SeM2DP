@@ -20,7 +20,7 @@ DYNAMIC_CLASSES = [12, 20, 76, 80, 83, 90, 102, 103, 116, 127] # Dynamic Object 
                     #[Person, Car, Boat, Bus, Truck, Airplane, Van, Ship, Motorbike, Bicycle]
 UNCLEAR_CLASSES = [2] # Classes that present non-fixed values
                     #[Sky]
-np.seterr(all='raise')
+#np.seterr(all='raise')
 # ----- Class Definitions -----
 class StereoExtractor:
     """
