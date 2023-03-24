@@ -138,3 +138,5 @@ dmypy.json
 *.tar.bz2
 *.caffemodel
 *.prototxt
+
+descriptors.txt
