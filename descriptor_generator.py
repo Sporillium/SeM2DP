@@ -21,6 +21,8 @@ stereo_extractor = stereo.StereoExtractor(segmentation_engine, detector='SIFT', 
 cloud_engine = cloud.CloudProcessor(stereo_extractor)
 signature_generator = m2dp.m2dp()
 
+seq_leng = stereo_extractor.seq_len
+
 # Load Pose File:
 try: 
     poses = np.loadtxt(stereo_extractor.poses)
@@ -31,7 +33,7 @@ else:
 
 descriptors = {}
 with open("descriptors.txt", 'w') as file:
-    for im in trange(50):
+    for im in trange(seq_leng):
         point_cloud = cloud_engine.processFrameNoSemantics(im)
         descriptors[im] = signature_generator.extractAndProcess(point_cloud)
         line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
