@@ -8,10 +8,8 @@ import m2dp
 
 # Python Package imports
 import numpy as np
-import json
 import cv2 as cv
 from tqdm import trange
-import time
 
 # Define Execution flags:
 SHOW_POSE_ESTIMATE = False
@@ -34,17 +32,9 @@ else:
 descriptors = {}
 with open("descriptors.txt", 'w') as file:
     for im in trange(50):
-        #st = time.time()
         point_cloud = cloud_engine.processFrameNoSemantics(im)
-        #cl = time.time()
         descriptors[im] = signature_generator.extractAndProcess(point_cloud)
-        #des = time.time()
-        #print("Cloud Generation took ", (cl-st)*1000, " ms")
-        #print("Descriptor Generation took ", (des-cl)*1000, " ms")
-        #print(" ")
         line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
         file.write(line+"\n")
-
-
 
 print(len(descriptors))
