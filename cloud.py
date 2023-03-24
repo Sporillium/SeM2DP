@@ -64,6 +64,37 @@ class CloudProcessor:
         
         return points
     
+    def processFrameNoSemantics(self, img):
+        """
+        Extracts 2D point features and computes 3D Point clouds for a single frame of an input stereo image
+
+        Parameters:
+        ----------
+            img (int): ID of image/frame to process
+
+        Returns:
+        ----------
+            points (list): A list of extracted 3D Semantic points
+        """
+        epi_mat, kpL, kpR, desL, desR = self.stereo_extractor.pointsFromImages(img)
+
+        points = []
+        for mat, i in zip(epi_mat, range(len(epi_mat))):
+            featL = kpL[mat.queryIdx]
+            featR = kpR[mat.trainIdx]
+            descL = desL[mat.queryIdx]
+            descR = desR[mat.trainIdx]
+
+            (xl, yl) = featL.pt
+            (xr, yr) = featR.pt
+
+            mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
+            point = MeasuredPoint(mean, cov, sem_dist=None, left_descriptor=descL, right_descriptor=descR)
+            points.append(point)
+        
+        
+        return points
+    
     def processPoseChange(self, prev_cloud, curr_cloud):
         """
         Estimates the pose change between two consecutive images in a sequence of stereo images
