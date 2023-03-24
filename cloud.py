@@ -79,7 +79,7 @@ class CloudProcessor:
         epi_mat, kpL, kpR, desL, desR = self.stereo_extractor.pointsFromImages(img)
 
         points = []
-        for mat, i in zip(epi_mat, range(len(epi_mat))):
+        for mat in epi_mat:
             featL = kpL[mat.queryIdx]
             featR = kpR[mat.trainIdx]
             descL = desL[mat.queryIdx]
@@ -91,7 +91,6 @@ class CloudProcessor:
             mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
             point = MeasuredPoint(mean, cov, sem_dist=None, left_descriptor=descL, right_descriptor=descR)
             points.append(point)
-        
         
         return points
     
