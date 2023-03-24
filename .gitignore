@@ -140,3 +140,5 @@ dmypy.json
 *.prototxt
 
 descriptors.txt
+
+descriptor_texts/
