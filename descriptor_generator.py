@@ -8,7 +8,6 @@ import m2dp
 
 # Python Package imports
 import numpy as np
-import cv2 as cv
 from tqdm import trange
 
 # Define Execution flags:
