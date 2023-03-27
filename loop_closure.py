@@ -6,8 +6,11 @@ import matplotlib.pyplot as plt
 
 match_boundary = 50 # Number of frames before matching can occur
 
+SEQ_NUM = 0
+seq_name = f'{SEQ_NUM:02}'
+
 # Load Poses for GT Loop closures
-poses = np.loadtxt('/home/march/devel/datasets/Kitti/odometry-2012/poses/00.txt')
+poses = np.loadtxt('/home/march/devel/datasets/Kitti/odometry-2012/poses/'+seq_name+'.txt')
 locations = []
 for i in range(poses.shape[0]):
     pose = np.reshape(poses[i, :], (3,4))
@@ -38,7 +41,7 @@ print("GT MATCHES COMPUTED")
 
 # Load Pre-computed Descriptors for Evaluation
 descriptors = {}
-with open('descriptors.txt', 'r') as file:
+with open('descriptor_texts/basic_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
     lines = file.readlines()
 for i, line in zip(range(len(lines)), lines):
     try:
@@ -54,7 +57,7 @@ recall = []
 # Define Thresholds and matching objects
 #threshold = 0.5
 neigh = NearestNeighbors(n_neighbors=1)
-ranges = np.arange(0.1, 3.5, 0.1)
+ranges = np.arange(0.01, 1.0, 0.01)
 for threshold in tqdm(ranges):
     valid_frames = []
     matches = {}
@@ -112,6 +115,7 @@ for threshold in tqdm(ranges):
     
 fig = plt.figure()
 ax = fig.add_subplot(111)
+ax.set_aspect('equal')
 ax.set_title("Precision - Recall Curve")
 ax.set_xlabel("Recall")
 ax.set_ylabel("Precision")
