@@ -14,7 +14,7 @@ Q = 16 # Altitude angles [0, pi/2q, 2pi/2q ... pi/2] default 16
 L = 8 # Number of concentric circles [l^2r, (l-1)^2r ... 2^2r, r] default 8
 T = 16 # Number of bins per circle default 16
 
-class m2dp:
+class sem2dp:
     # Constructor
     def __init__(self, P=P, Q=Q, L=L, T=T):
         self.p = P
@@ -66,7 +66,7 @@ class m2dp:
             loc = point.location
             lab = point.label
             tot.append(loc)
-            labs.apped(lab)
+            labs.append(lab)
             x.append(loc[0])
             y.append(loc[1])
             z.append(loc[2])
@@ -82,6 +82,7 @@ class m2dp:
         
         self.mod_cloud = tot
         self.label_map = labs
+        #print(self.label_map)
     
     def cloudAxes(self):
         """
@@ -221,12 +222,18 @@ class m2dp:
 
             # for c in range(1, len(circles), 1):
             #     for b in range(1, len(bins), 1):
-            combo = zip(self.label_map, flat_cloud)
+            bin_labs = []
             for c,b in it.product(range(1, len(circles), 1), range(1, len(bins), 1)):
-                in_bin = [p for l,p in combo if circles[c] >= p[0] > circles[c-1] and bins[b] >= p[1] > bins[b-1]]
-                bin_labs = [l for l,p in combo if circles[c] >= p[0] > circles[c-1] and bins[b] >= p[1] > bins[b-1]]
-                label = mostFrequent(bin_labs)
-
+                in_bin = [p for p in flat_cloud if circles[c] >= p[0] > circles[c-1] and bins[b] >= p[1] > bins[b-1]]
+                for i in range(len(flat_cloud)): 
+                    if (circles[c] >= flat_cloud[i][0] > circles[c-1]) and (bins[b] >= flat_cloud[i][1] > bins[b-1]):
+                        lab = self.label_map[i]
+                        bin_labs.append(lab)
+                    
+                if len(bin_labs) == 0:
+                    label = 0
+                else:
+                    label = mostFrequent(bin_labs)
                 self.A[(th*self.q + ph), (c-1)*self.t + (b-1)] = len(in_bin)
         
         #print(A)
@@ -240,6 +247,31 @@ class m2dp:
         d = np.concatenate((u.T[0,:], vh[0,:])).T
         #print(d.shape)
         return d
+    
+    def extractAndProcess(self, point_cloud):
+        """
+        Makes a general call to all processing methods in the M2DP class, and processes a given point cloud into a descriptor 
+
+        Parameters:
+        ----------
+            point_cloud: Array or list of points in point cloud with 3D coordinates
+
+        Returns:
+        ----------
+            descriptor: Vector of values that serves as the descriptor of the scene, of shape [(P*Q + L*T), 1]
+        """
+        # Read the point cloud into the object memory
+        self.readCloud(point_cloud)
+
+        # Calculate the centroid of the point cloud
+        self.centroidPointCloud()
+
+        # Define the principle axes of the point cloud using PCA
+        self.cloudAxes()
+
+        # Generate the descriptor using planar projection, and return
+        descriptor = self.calculateDescriptor()
+        return descriptor
 
 def mostFrequent(List):
-    return max(set(List), key = List.count)
+    return max(set(List), key=List.count)
