@@ -21,7 +21,7 @@ class sem2dp:
         self.q = Q
         self.l = L
         self.t = T
-        self.A = np.zeros((P*Q, T*L))
+        self.A = np.zeros((P*Q, 2*T*L))
 
         self.point_cloud = None
         self.mod_cloud = None
@@ -223,6 +223,8 @@ class sem2dp:
             # for c in range(1, len(circles), 1):
             #     for b in range(1, len(bins), 1):
             bin_labs = []
+            list_counts = []
+            list_labs = []
             for c,b in it.product(range(1, len(circles), 1), range(1, len(bins), 1)):
                 in_bin = [p for p in flat_cloud if circles[c] >= p[0] > circles[c-1] and bins[b] >= p[1] > bins[b-1]]
                 for i in range(len(flat_cloud)): 
@@ -234,7 +236,14 @@ class sem2dp:
                     label = 0
                 else:
                     label = mostFrequent(bin_labs)
-                self.A[(th*self.q + ph), (c-1)*self.t + (b-1)] = len(in_bin)
+                
+                list_counts.append(len(in_bin))
+                list_labs.append(label)
+            combo_list = [None]*(len(list_counts)+len(list_labs))
+            combo_list[::2] = list_counts
+            combo_list[1::2] = list_labs
+            combo = np.asarray(combo_list)
+            self.A[(th*self.q + ph), :] = combo
         
         #print(A)
         u, s, vh = np.linalg.svd(self.A)
