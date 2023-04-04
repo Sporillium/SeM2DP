@@ -41,7 +41,7 @@ print("GT MATCHES COMPUTED")
 
 # Load Pre-computed Descriptors for Evaluation
 descriptors = {}
-with open('descriptor_texts/basic_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+with open('descriptor_texts/sem_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
     lines = file.readlines()
 for i, line in zip(range(len(lines)), lines):
     try:
