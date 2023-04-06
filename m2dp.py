@@ -9,7 +9,6 @@ import math
 import matplotlib.pyplot as plt
 import itertools as it
 from sklearn.decomposition import PCA
-import multiprocessing
 
 
 # Parameters for M2DP
@@ -23,7 +22,7 @@ A = np.zeros((P*Q, T*L))
 
 class m2dp:
     # Constructor
-    def __init__(self, P=P, Q=Q, L=L, T=T):
+    def __init__(self, pool, P=P, Q=Q, L=L, T=T):
         self.p = P
         self.q = Q
         self.l = L
@@ -46,6 +45,7 @@ class m2dp:
             y = np.cos(phi[ph])*np.sin(theta[th])
             z = np.sin(phi[ph])
             self.norms.append(np.array([x, y, z]))
+        self.pool = pool
     
     # Methods
     def plotAxes(self):
@@ -321,15 +321,15 @@ class m2dp:
         """
         #bins = np.linspace(0, np.pi*2, self.t+1)
 
-        pool = multiprocessing.Pool(processes=4)
+        #pool = multiprocessing.Pool(processes=4)
         
         inputs = []
 
         for norm in self.norms:
             inputs.append((self.mod_cloud, norm, self.x_axis))
 
-        outputs = pool.map(proj_cloud, inputs)
-        pool.close()
+        outputs = self.pool.map(proj_cloud, inputs)
+        #self.pool.close()
         A = np.asarray(outputs)
         u, s, vh = np.linalg.svd(A)
         d = np.concatenate((u.T[0,:], vh[0,:])).T
