@@ -9,6 +9,7 @@ import math
 import matplotlib.pyplot as plt
 import itertools as it
 from sklearn.decomposition import PCA
+import multiprocessing
 
 
 # Parameters for M2DP
@@ -35,6 +36,16 @@ class m2dp:
         self.centroid = None
         self.x_axis = None
         self.y_axis = None
+
+        self.norms = []
+        theta = np.linspace(0, np.pi, self.p)
+        phi = np.linspace(0, np.pi/2, self.q)
+        for th,ph in it.product(range(len(theta)), range(len(phi))):   
+            # Construct Surface normal
+            x = np.cos(phi[ph])*np.cos(theta[th])
+            y = np.cos(phi[ph])*np.sin(theta[th])
+            z = np.sin(phi[ph])
+            self.norms.append(np.array([x, y, z]))
     
     # Methods
     def plotAxes(self):
@@ -308,69 +319,20 @@ class m2dp:
         ----------
             d: Vector of values that serves as the descriptor of the scene, of shape [(P*Q + L*T), 1]
         """
-        theta = np.linspace(0, np.pi, self.p)
-        phi = np.linspace(0, np.pi/2, self.q)
-        bins = np.linspace(0, np.pi*2, self.t+1)
+        #bins = np.linspace(0, np.pi*2, self.t+1)
 
-        for th,ph in it.product(range(len(theta)), range(len(phi))):
-                
-            # Construct Surface normal
-            x = np.cos(phi[ph])*np.cos(theta[th])
-            y = np.cos(phi[ph])*np.sin(theta[th])
-            z = np.sin(phi[ph])
-            norm = np.array([x, y, z])
-
-            dist_x = np.dot(self.x_axis, norm)
-            proj_x = self.x_axis - (dist_x*norm)
-            
-            # Construct Perpendicular Axis
-            proj_y = np.cross(proj_x, norm)
-
-            # Construct basis vectors:
-            norm_x = proj_x/np.linalg.norm(proj_x)
-            norm_y = proj_y/np.linalg.norm(proj_y)
-
-            # Project cloud onto plane and change basis to planar coordinates
-            flat_cloud = []
-            for point in self.mod_cloud:
-                dist = np.dot(point, norm)
-                proj = point - (dist*norm)
-                point_x = np.dot(proj, norm_x)
-                point_y = np.dot(proj, norm_y)
-                point_rad = math.dist([0,0],[point_x, point_y])
-                point_theta = math.atan2(point_x, point_y)
-                flat_cloud.append(np.array([point_rad, point_theta]))
-
-            # Find the furthest point from Origin, and define biggest circle
-            max_dist = 0
-            for point in flat_cloud:
-                if point[0] > max_dist:
-                    max_dist = point[0]
-            
-            # Define circles
-            r = max_dist/(self.l**2)
-            circles = [0]
-            for i in range(1, self.l, 1):
-                rads = (i**2)*r
-                circles.append(rads)
-            circles.append(max_dist)
-
-            # for c in range(1, len(circles), 1):
-            #     for b in range(1, len(bins), 1):
-            for c,b in it.product(range(1, len(circles), 1), range(1, len(bins), 1)):
-                in_bin = [p for p in flat_cloud if circles[c] >= p[0] > circles[c-1] and bins[b] >= p[1] > bins[b-1]]
-                A[(th*self.q + ph), (c-1)*self.t + (b-1)] = len(in_bin)
+        pool = multiprocessing.Pool(processes=4)
         
-        #print(A)
+        inputs = []
+
+        for norm in self.norms:
+            inputs.append((self.mod_cloud, norm, self.x_axis))
+
+        outputs = pool.map(proj_cloud, inputs)
+        pool.close()
+        A = np.asarray(outputs)
         u, s, vh = np.linalg.svd(A)
-        #print(u.shape)
-        #print(u)
-        #print("\n\n")
-        #print(vh.shape)
-        #print(vh)
-        #print("\n\n")
         d = np.concatenate((u.T[0,:], vh[0,:])).T
-        #print(d.shape)
         return d
     
     def extractAndProcess(self, point_cloud):
@@ -387,17 +349,60 @@ class m2dp:
         """
         # Read the point cloud into the object memory
         self.readCloud(point_cloud)
+        #print("Cloud Read!")
 
         # Calculate the centroid of the point cloud
         self.centroidPointCloud()
+        #print("Centroid Found!")
 
         # Define the principle axes of the point cloud using PCA
         self.cloudAxes()
+        #print("Principle Axes Found!")
 
         # Generate the descriptor using planar projection, and return
         descriptor = self.calculateDescriptor()
+        #print("Descriptor Calculated!")
         return descriptor
 
+def proj_cloud(input):
+    (cloud, norm, x_axis) = input
+    cloud = np.asarray(cloud) # Nx3
+    # Norm: 3x1
+    dist_x = np.dot(x_axis, norm)
+    proj_x = x_axis - (dist_x*norm)
+    
+    # Construct Perpendicular Axis
+    proj_y = np.cross(proj_x, norm)
+
+    # Construct basis vectors:
+    norm_x = proj_x/np.linalg.norm(proj_x)
+    norm_y = proj_y/np.linalg.norm(proj_y)
+
+    # Project cloud onto plane and change basis to planar coordinates
+    max_dist = 0
+    #for point in cloud:
+    dist = np.dot(cloud, norm) # Nx1
+    proj = cloud - np.multiply(norm, dist[:,None])
+    point_x = np.dot(proj, norm_x)
+    point_y = np.dot(proj, norm_y)
+
+    point_rad = np.sqrt(point_x**2 + point_y**2)
+    max_dist = np.max(point_rad)
+    point_theta = np.arctan2(point_x, point_y)
+    
+    #Define circles
+    r = max_dist/(L**2)
+    circles = [0]
+    for i in range(1, L, 1):
+        rads = (i**2)*r
+        circles.append(rads)
+    circles.append(max_dist)
+    bins = np.linspace(0, np.pi*2, T+1)
+
+    h, r_edges, deg_edges = np.histogram2d(point_rad, point_theta, bins=(circles, bins))
+   
+    counts = np.ravel(h)
+    return counts
 
 
 
