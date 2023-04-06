@@ -6,25 +6,43 @@ import stereo
 import cloud
 import m2dp
 import sem2dp
+import lidar
 
 # Python Package imports
 import numpy as np
 from tqdm import trange
+import multiprocessing
+import argparse
+
+# Argument Parser:
+parser = argparse.ArgumentParser(description="Process Data into M2DP Descriptors")
+parser.add_argument('-n', '--number', required=True, type=int, help="Specify sequence number to be processes") # Sequence Number
+parser.add_argument('-r', '--resume', type=int, help="Set a specific frame to resume execution from") # Resume frame
+parser.add_argument('-s', '--use_sem', action='store_true', help="Set flag to use semantic information for descriptor generation") #Use Sem True/False
+parser.add_argument('-v', '--use_velodyne', action='store_true', help="Set flag to use Velodyne data for descriptor generation") #Use Velo True/False
+
+args = parser.parse_args()
 
 # Define Execution flags:
-SEQ_NUM = 5
-USE_SEM = True
+SEQ_NUM = args.number
+USE_SEM = args.use_sem
+USE_VELO = args.use_velodyne
+resume = args.resume
 
 # ----- Main Execution Starts here -----
 # Load processing objects:
+
 segmentation_engine = seg.SegmentationEngine(model_id=6, use_gpu=False)
 stereo_extractor = stereo.StereoExtractor(segmentation_engine, detector='SIFT', matcher='BF', camera_id=0, seq=SEQ_NUM)
 cloud_engine = cloud.CloudProcessor(stereo_extractor)
+velo_proc = lidar.VelodyneProcessor(camera_id=0, seq=SEQ_NUM)
 seq_leng = stereo_extractor.seq_len
 seq_name = f'{SEQ_NUM:02}'
 
-if not USE_SEM:
-    signature_generator = m2dp.m2dp()
+pool = multiprocessing.Pool(6)
+
+if not USE_SEM and not USE_VELO:
+    signature_generator = m2dp.m2dp(pool=pool)
     descriptors = {}
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
@@ -35,7 +53,7 @@ if not USE_SEM:
 
     print(len(descriptors))
 
-if USE_SEM:
+if USE_SEM and not USE_VELO:
     signature_generator = sem2dp.sem2dp()
     descriptors = {}
     with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -45,5 +63,25 @@ if USE_SEM:
             line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
             file.write(line+"\n")
 
+    print(len(descriptors))
+
+if not USE_SEM and USE_VELO:
+    signature_generator = m2dp.m2dp(pool=pool)
+    descriptors = {}
+    if resume is None:
+        with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud = velo_proc.createCloud(im)
+                descriptors[im] = signature_generator.extractAndProcess(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                file.write(line+"\n")
+    else:
+        with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud = velo_proc.createCloud(im)
+                descriptors[im] = signature_generator.extractAndProcess(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                file.write(line+"\n")
+    
     print(len(descriptors))
 
