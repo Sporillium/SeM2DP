@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 match_boundary = 50 # Number of frames before matching can occur
 
-SEQ_NUM = 7
+SEQ_NUM = 0
 seq_name = f'{SEQ_NUM:02}'
 
 # Load Poses for GT Loop closures
