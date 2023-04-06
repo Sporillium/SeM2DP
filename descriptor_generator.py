@@ -12,7 +12,7 @@ import numpy as np
 from tqdm import trange
 
 # Define Execution flags:
-SEQ_NUM = 1
+SEQ_NUM = 5
 USE_SEM = True
 
 # ----- Main Execution Starts here -----
