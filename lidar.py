@@ -33,15 +33,7 @@ class VelodyneProcessor:
         point_cloud = []
         cloud = np.fromfile(self.path_velo+image_str+'.bin', dtype=np.float32).reshape((4,-1))
         #print(cloud.shape[0], cloud.shape[1])
-        for i in range(cloud.shape[1]):
-            row = cloud[:,i]
-            #print(row.shape)
-            #print(row)
-            point_loc = row[:3]
-            #print(point_loc.shape)
-            point_ref = row[3]
-            point = Point(point_loc, point_ref)
-            point_cloud.append(point)
+        point_cloud = cloud[:3, :].T
         
         return point_cloud
 
