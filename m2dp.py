@@ -22,7 +22,7 @@ A = np.zeros((P*Q, T*L))
 
 class m2dp:
     # Constructor
-    def __init__(self, pool, P=P, Q=Q, L=L, T=T):
+    def __init__(self, P=P, Q=Q, L=L, T=T):
         self.p = P
         self.q = Q
         self.l = L
@@ -45,7 +45,7 @@ class m2dp:
             y = np.cos(phi[ph])*np.sin(theta[th])
             z = np.sin(phi[ph])
             self.norms.append(np.array([x, y, z]))
-        self.pool = pool
+        #self.pool = pool
     
     # Methods
     def plotAxes(self):
@@ -404,7 +404,103 @@ def proj_cloud(input):
     counts = np.ravel(h)
     return counts
 
+def createDescriptor(data):
+    data = np.asarray(data)
+    #print(data.shape)
 
+    numT = 16
+    numR = 8
+    numP = 4
+    numQ = 16
+
+    data = PCARotationInvariant(data)
+
+    azimuthList = np.linspace(-np.pi/2, np.pi, numP)
+    elevationList = np.linspace(0,np.pi/2, numQ)
+
+    rho2 = np.sum(data**2, 1)
+    maxRho = np.sqrt(max(rho2))
+
+    A = GetSignatureMatrix(azimuthList, elevationList, data, numT, numR, maxRho)
+
+    u,s,v = np.linalg.svd(A)
+    desM2DP  = np.concatenate((u.T[0,:], v[0,:])).T
+
+    return desM2DP
+
+def PCARotationInvariant(data):
+    n = data.shape[0]
+    #print(n)
+    md = np.mean(data, 0)
+
+    data = data - np.tile(md,(n,1))
+
+    pca = PCA(n_components=3)
+    pca.fit(data)
+
+    #print(pca.components_[(0)].shape)
+    #print(data.shape)
+
+    X = np.matmul(pca.components_[(0)].T, data.T)
+    Y = np.matmul(pca.components_[(1)].T, data.T)
+    Z = np.matmul(pca.components_[(2)].T, data.T)
+    data = np.array([X, Y, Z])
+    
+    return data.T
+
+def GetSignatureMatrix(azimuthList, elevationList, data, numT, numR, maxRho):
+    A = np.zeros((len(azimuthList)*len(elevationList),numT*numR))
+    #print(A.shape)
+    n = 0
+
+    thetaList = np.linspace(-np.pi,np.pi,numT+1)
+
+    rhoList = np.linspace(0,np.sqrt(maxRho),numR+1)
+    rhoList = rhoList**2
+    rhoList[-1] = rhoList[-1] + 0.001
+
+    for azm in azimuthList:
+        for elv in elevationList:
+            x,y,z = sph2cart(azm,elv,1)
+            vecN = np.array([x, y, z])
+
+            h = np.array([1,0,0])*vecN.T
+            c = h*vecN
+
+            px = np.array([1,0,0]) - c
+
+            #print(px)
+
+            py = np.cross(vecN, px)
+
+            #print(py)
+
+            pdata = np.array([data@px.T, data@py.T])
+            #print(pdata.shape)
+
+            theta,rho = cart2pol(pdata[:,0], pdata[:,1])
+
+            bin, r_edges, deg_edges = np.histogram2d(rho, theta, bins=(rhoList, thetaList))
+            bin = np.ravel(bin)
+
+            A[n, :] = bin.T
+            n += 1
+    
+    return A
+
+def sph2cart(ph, th, rad):
+    x = rad*np.cos(ph)*np.cos(th)
+    y = rad*np.cos(ph)*np.sin(th)
+    z = rad*np.sin(ph)
+
+    return x, y, z
+
+def cart2pol(x, y):
+    rad = np.sqrt(x**2 + y**2)
+    th = np.arctan2(x, y)
+    #print(rad.shape, th.shape)
+
+    return th, rad
 
 
 
