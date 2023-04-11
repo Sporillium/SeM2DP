@@ -9,6 +9,9 @@ match_boundary = 50 # Number of frames before matching can occur
 SEQ_NUM = 0
 seq_name = f'{SEQ_NUM:02}'
 
+SEARCH_RANGE = 100.0
+SEARCH_INTERVAL = 1.0
+
 # Load Poses for GT Loop closures
 poses = np.loadtxt('/home/march/devel/datasets/Kitti/odometry-2012/poses/'+seq_name+'.txt')
 locations = []
@@ -41,7 +44,7 @@ print("GT MATCHES COMPUTED")
 
 # Load Pre-computed Descriptors for Evaluation
 descriptors = {}
-with open('descriptor_texts/sem_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+with open('descriptor_texts/velo_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
     lines = file.readlines()
 for i, line in zip(range(len(lines)), lines):
     try:
@@ -57,7 +60,7 @@ recall = []
 # Define Thresholds and matching objects
 #threshold = 0.5
 neigh = NearestNeighbors(n_neighbors=1)
-ranges = np.arange(0.01, 1.0, 0.01)
+ranges = np.arange(0.01, SEARCH_RANGE, SEARCH_INTERVAL)
 for threshold in tqdm(ranges):
     valid_frames = []
     matches = {}
