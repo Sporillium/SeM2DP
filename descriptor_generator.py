@@ -8,6 +8,8 @@ import m2dp
 import sem2dp
 import lidar
 
+from m2dp import createDescriptor
+
 # Python Package imports
 import numpy as np
 from tqdm import trange
@@ -39,10 +41,10 @@ velo_proc = lidar.VelodyneProcessor(camera_id=0, seq=SEQ_NUM)
 seq_leng = stereo_extractor.seq_len
 seq_name = f'{SEQ_NUM:02}'
 
-pool = multiprocessing.Pool(6)
+#pool = multiprocessing.Pool(6)
 
 if not USE_SEM and not USE_VELO:
-    signature_generator = m2dp.m2dp(pool=pool)
+    signature_generator = m2dp.m2dp()
     descriptors = {}
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
@@ -66,20 +68,20 @@ if USE_SEM and not USE_VELO:
     print(len(descriptors))
 
 if not USE_SEM and USE_VELO:
-    signature_generator = m2dp.m2dp(pool=pool)
+    signature_generator = m2dp.m2dp()
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
             for im in trange(seq_leng):
                 point_cloud = velo_proc.createCloud(im)
-                descriptors[im] = signature_generator.extractAndProcess(point_cloud)
+                descriptors[im] = createDescriptor(point_cloud)
                 line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 file.write(line+"\n")
     else:
         with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'a') as file:
             for im in trange(resume, seq_leng):
                 point_cloud = velo_proc.createCloud(im)
-                descriptors[im] = signature_generator.extractAndProcess(point_cloud)
+                descriptors[im] = createDescriptor(point_cloud)
                 line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 file.write(line+"\n")
     
