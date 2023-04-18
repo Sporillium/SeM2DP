@@ -13,7 +13,6 @@ from m2dp import createDescriptor
 # Python Package imports
 import numpy as np
 from tqdm import trange
-import multiprocessing
 import argparse
 
 # Argument Parser:
@@ -74,7 +73,9 @@ if not USE_SEM and USE_VELO:
         with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
             for im in trange(seq_leng):
                 point_cloud = velo_proc.createCloud(im)
+
                 descriptors[im] = createDescriptor(point_cloud)
+                
                 line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 file.write(line+"\n")
     else:
