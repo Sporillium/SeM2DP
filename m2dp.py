@@ -413,15 +413,16 @@ def createDescriptor(data):
     numP = P
     numQ = Q
 
-    data = PCARotationInvariant(data)
+    data_rot = PCARotationInvariant(data)
 
     azimuthList = np.linspace(-np.pi/2, np.pi, numP)
     elevationList = np.linspace(0,np.pi/2, numQ)
 
-    rho2 = np.sum(data**2, 1)
+    rho2 = np.sum(np.power(data_rot, 2), 1)
     maxRho = np.sqrt(max(rho2))
 
-    A = GetSignatureMatrix(azimuthList, elevationList, data, numT, numR, maxRho)
+    A = GetSignatureMatrix(azimuthList, elevationList, data_rot, numT, numR, maxRho)
+    #print(A)
 
     u,s,vh = np.linalg.svd(A)
     # print(u.shape)
@@ -432,7 +433,7 @@ def createDescriptor(data):
 
 def PCARotationInvariant(data):
     n = data.shape[0]
-    #print(n)
+
     md = np.mean(data, 0)
 
     data = data - np.tile(md,(n,1))
@@ -440,15 +441,21 @@ def PCARotationInvariant(data):
     pca = PCA(n_components=3)
     pca.fit(data)
 
-    #print(pca.components_[(0)].shape)
-    #print(data.shape)
+    #print("PCA Components shape: ", pca.components_.shape)
+    #print("PCA Component Matrix:", pca.components_)
+    #print("Data Shape:", data.shape)
 
-    X = np.matmul(pca.components_[(0)].T, data.T)
-    Y = np.matmul(pca.components_[(1)].T, data.T)
-    Z = np.matmul(pca.components_[(2)].T, data.T)
-    data = np.array([X, Y, Z])
+    x_component = pca.components_[0, :]
+    y_component = pca.components_[1, :]
+    z_component = pca.components_[2, :]
+
+    X = np.matmul(x_component, data.T)
+    Y = np.matmul(y_component, data.T)
+    Z = np.matmul(z_component, data.T)
+
+    data_trans = np.array([X, Y, Z])
     
-    return data.T
+    return data_trans.T
 
 def GetSignatureMatrix(azimuthList, elevationList, data, numT, numR, maxRho):
     A = np.zeros((len(azimuthList)*len(elevationList),numT*numR))
@@ -463,29 +470,32 @@ def GetSignatureMatrix(azimuthList, elevationList, data, numT, numR, maxRho):
 
     for azm in azimuthList:
         for elv in elevationList:
-            x,y,z = sph2cart(azm,elv,1)
-            vecN = np.array([x, y, z])
+            vecN = sph2cart(azm,elv,1)
+            #print("Normal", vecN, vecN.shape)
+            #vecN = np.array([x, y, z])
 
-            h = np.array([1,0,0])*vecN.T
+            h = np.matmul(np.array([1, 0, 0]), vecN.T)
+            #print("H:", h, h.shape)
+
             c = h*vecN
 
-            px = np.array([1,0,0]) - c
+            px = np.array([1, 0, 0]) - c
 
-            #print(px)
+            #print("PX:",px, px.shape)
 
             py = np.cross(vecN, px)
 
-            #print(py)
+            #print("PY:", py, py.shape)
 
-            pdata = np.array([data@px.T, data@py.T])
-            #print(pdata.shape)
+            pdata = np.transpose(np.array([data@px, data@py]))
+            #print("Point Data", pdata.shape)
 
             theta,rho = cart2pol(pdata[:,0], pdata[:,1])
 
             bin, r_edges, deg_edges = np.histogram2d(rho, theta, bins=(rhoList, thetaList))
             bin = np.ravel(bin)
 
-            A[n, :] = bin.T
+            A[n, :] = bin
             n += 1
     
     return A
@@ -495,7 +505,7 @@ def sph2cart(ph, th, rad):
     y = rad*np.cos(ph)*np.sin(th)
     z = rad*np.sin(ph)
 
-    return x, y, z
+    return np.array([x, y, z])
 
 def cart2pol(x, y):
     rad = np.sqrt(x**2 + y**2)
