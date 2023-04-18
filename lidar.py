@@ -31,9 +31,9 @@ class VelodyneProcessor:
     def createCloud(self, im_no):
         image_str = f'{im_no:06}'
         point_cloud = []
-        cloud = np.fromfile(self.path_velo+image_str+'.bin', dtype=np.float32).reshape((4,-1))
+        cloud = np.fromfile(self.path_velo+image_str+'.bin', dtype=np.float32).reshape((-1, 4))
         #print(cloud.shape[0], cloud.shape[1])
-        point_cloud = cloud[:3, :].T
+        point_cloud = cloud[:, :3]
         
         return point_cloud
 
