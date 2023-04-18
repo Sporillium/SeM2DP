@@ -408,10 +408,10 @@ def createDescriptor(data):
     data = np.asarray(data)
     #print(data.shape)
 
-    numT = 16
-    numR = 8
-    numP = 4
-    numQ = 16
+    numT = T
+    numR = L
+    numP = P
+    numQ = Q
 
     data = PCARotationInvariant(data)
 
@@ -423,8 +423,10 @@ def createDescriptor(data):
 
     A = GetSignatureMatrix(azimuthList, elevationList, data, numT, numR, maxRho)
 
-    u,s,v = np.linalg.svd(A)
-    desM2DP  = np.concatenate((u.T[0,:], v[0,:])).T
+    u,s,vh = np.linalg.svd(A)
+    # print(u.shape)
+    # print(vh.shape)
+    desM2DP  = np.concatenate((u[:,0], vh[0,:]))
 
     return desM2DP
 
