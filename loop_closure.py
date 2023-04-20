@@ -192,18 +192,23 @@ for thresh in tqdm(thresholds):
 fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.set_aspect('equal')
-ax.set_title("Precision - Recall Curve")
+ax.set_title("Precision - Recall Curve: Sequence "+seq_name)
 ax.set_xlabel("Recall")
 ax.set_ylabel("Precision")
 if USE_REG:
-    ax.plot(recall_reg, precision_reg,  'b-')
+    reg_key, = ax.plot(recall_reg, precision_reg,  'b-')
+    reg_key.set_label("Visual")
 if USE_SEM:
-    ax.plot(recall_sem, precision_sem,  'g-')
+    sem_key, = ax.plot(recall_sem, precision_sem,  'g-')
+    sem_key.set_label("Visual-Semantic")
 if USE_VELO:
-    ax.plot(recall_velo, precision_velo,  'r-')
+    velo_key, = ax.plot(recall_velo, precision_velo,  'r-')
+    velo_key.set_label("Velodyne")
 if USE_VELO_SEM:
-    ax.plot(recall_velo_sem, precision_velo_sem,  'y-')
+    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'y-')
+    velo_sem_key.set_label("Velodyne-Semantic")
 ax.grid()
+ax.legend()
 ax.set_xlim([-0.01, 1.01])
 ax.set_ylim([-0.01, 1.01])
 
