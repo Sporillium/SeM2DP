@@ -48,7 +48,12 @@ if not USE_SEM and not USE_VELO:
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
             point_cloud = cloud_engine.processFrameNoSemantics(im)
-            descriptors[im] = signature_generator.extractAndProcess(point_cloud)
+            cloud_arr = []
+            for point in point_cloud:
+                loc = point.location
+                cloud_arr.append(loc)
+            cloud_arr = np.asarray(cloud_arr)
+            descriptors[im] = createDescriptor(cloud_arr)
             line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
             file.write(line+"\n")
 
