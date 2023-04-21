@@ -64,8 +64,8 @@ if USE_SEM and not USE_VELO:
     descriptors = {}
     with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
-            point_cloud = cloud_engine.processFrame(im)
-            descriptors[im] = signature_generator.extractAndProcess(point_cloud)
+            point_cloud = velo_proc.createCloudMod(im)
+            descriptors[im] = createDescriptor(point_cloud)
             line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
             file.write(line+"\n")
 
@@ -78,9 +78,7 @@ if not USE_SEM and USE_VELO:
         with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
             for im in trange(seq_leng):
                 point_cloud = velo_proc.createCloud(im)
-
                 descriptors[im] = createDescriptor(point_cloud)
-                
                 line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 file.write(line+"\n")
     else:
