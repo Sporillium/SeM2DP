@@ -10,6 +10,7 @@ ID:
       x_off: 607.1928
       y_off: 185.2157
       image_path: '/home/march/devel/datasets/Kitti/odometry-2012/sequences/'
+      calib_path: '/home/march/devel/datasets/Kitti/odometry-2012/calibration/'
       seq_id: 
         - '00/'
         - '01/'
