@@ -36,8 +36,8 @@ if (USE_REG or USE_SEM or USE_VELO or USE_VELO_SEM) is False:
 
 match_boundary = 50 # Number of frames before/after matching can occur
 gt_threshold = 10.0
-SEARCH_RANGE = 2.0
-SEARCH_INTERVAL = 0.002
+SEARCH_RANGE = 1.0
+SEARCH_INTERVAL = 0.0005
 
 matcher = cv.BFMatcher_create(cv.NORM_L2)
 
@@ -87,6 +87,13 @@ def evaluate_match(input_descriptor, cloud_ids, distances):
         rec = 0
 
     return prec, rec
+
+def find_max_rec(prec_list, rec_list):
+    prec = np.asarray(prec_list)
+    rec = np.asarray(rec_list)
+
+    return np.max(rec[prec >= 1.0])
+    
 
 # Load Poses for GT Loop closures
 poses = np.loadtxt('/home/march/devel/datasets/Kitti/odometry-2012/poses/'+seq_name+'.txt')
@@ -188,7 +195,8 @@ for thresh in tqdm(thresholds):
         recall_velo_sem.append(rec_velo_sem)
     
 
-# Plot the Curve   
+# Plot the Curve
+print("\n\n")   
 fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.set_aspect('equal')
@@ -198,21 +206,23 @@ ax.set_ylabel("Precision")
 if USE_REG:
     reg_key, = ax.plot(recall_reg, precision_reg,  'b-')
     reg_key.set_label("Visual")
+    print("Visual Recall @ 100% Precision: "+f'{find_max_rec(precision_reg, recall_reg)}')
 if USE_SEM:
     sem_key, = ax.plot(recall_sem, precision_sem,  'g-')
     sem_key.set_label("Visual-Semantic")
+    print("Visual-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_sem, recall_sem)}')
 if USE_VELO:
     velo_key, = ax.plot(recall_velo, precision_velo,  'r-')
     velo_key.set_label("Velodyne")
+    print("Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_velo, recall_velo)}')
 if USE_VELO_SEM:
     velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'y-')
     velo_sem_key.set_label("Velodyne-Semantic")
+    print("Velodyne-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_velo_sem, recall_velo_sem)}')
 ax.grid()
 ax.legend()
 ax.set_xlim([-0.01, 1.01])
 ax.set_ylim([-0.01, 1.01])
-
-
 plt.show()
 
     
