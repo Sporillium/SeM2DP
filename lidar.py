@@ -23,6 +23,7 @@ class VelodyneProcessor:
                 self.path_velo = camera_info['image_path']+sequences[seq]+'velodyne/'
                 self.poses = camera_info['poses_path']+f'{seq:02}'+'.txt'
                 self.seq_len = len[seq]
+                self.calib = camera_info['calib_path']+sequences[seq]+'calib.txt'
             else:
                 self.poses = camera_info['poses_path']
                 self.seq_len = camera_info['seq_len']    
@@ -33,8 +34,14 @@ class VelodyneProcessor:
         cloud = np.fromfile(self.path_velo+image_str+'.bin', dtype=np.float32).reshape((-1, 4))
         point_cloud = cloud[:, :3]
         #print(point_cloud.shape)
-        
         return point_cloud
+    
+    def createCloudProj(self, im_no):
+        image_str = f'{im_no:06}'
+        cloud = np.fromfile(self.path_velo+image_str+'.bin', dtype=np.float32).reshape((-1, 4))
+        cloud[:,3] = 1
+        #print(point_cloud.shape)
+        return cloud.T
 
 
 class Point:
