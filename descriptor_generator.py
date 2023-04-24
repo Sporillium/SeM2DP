@@ -4,11 +4,10 @@
 import segmentation as seg
 import stereo
 import cloud
-import m2dp
-import sem2dp
 import lidar
 
 from m2dp import createDescriptor
+from sem2dp import createSemDescriptor, des_compress, des_descompress
 
 # Python Package imports
 import numpy as np
@@ -43,7 +42,6 @@ seq_name = f'{SEQ_NUM:02}'
 #pool = multiprocessing.Pool(6)
 
 if not USE_SEM and not USE_VELO:
-    signature_generator = m2dp.m2dp()
     descriptors = {}
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
@@ -60,19 +58,29 @@ if not USE_SEM and not USE_VELO:
     print(len(descriptors))
 
 if USE_SEM and not USE_VELO:
-    signature_generator = sem2dp.sem2dp()
     descriptors = {}
-    with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'w') as file:
-        for im in trange(seq_leng):
-            point_cloud = velo_proc.createCloudMod(im)
-            descriptors[im] = createDescriptor(point_cloud)
-            line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
-            file.write(line+"\n")
+    if resume is None:
+        with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud, labels = cloud_engine.processFrame(im)
+                descriptor, sem_descriptor = createSemDescriptor(point_cloud, labels)
+                comp_sem_descriptor = des_compress(sem_descriptor)
+                line1 = np.array2string(descriptor, max_line_width=10000, separator=';')
+                line2 = np.array2string(comp_sem_descriptor, max_line_width=10000, separator=';', threshold=10000)
+                file.write(line1+"\n"+line2+"\n")
+    else:
+        with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud, labels = cloud_engine.processFrame(im)
+                descriptor, sem_descriptor = createSemDescriptor(point_cloud, labels)
+                comp_sem_descriptor = des_compress(sem_descriptor)
+                line1 = np.array2string(descriptor, max_line_width=10000, separator=';')
+                line2 = np.array2string(comp_sem_descriptor, max_line_width=10000, separator=';', threshold=10000)
+                file.write(line1+"\n"+line2+"\n")
 
     print(len(descriptors))
 
 if not USE_SEM and USE_VELO:
-    signature_generator = m2dp.m2dp()
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
