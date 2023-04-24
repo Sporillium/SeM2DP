@@ -13,8 +13,6 @@ Q = 16 # Altitude angles [0, pi/2q, 2pi/2q ... pi/2] default 16
 L = 8 # Number of concentric circles [l^2r, (l-1)^2r ... 2^2r, r] default 8
 T = 16 # Number of bins per circle default 16
 
-A = np.zeros((P*Q, T*L))
-
 def createDescriptor(data, T=16, L=8, P=4, Q=16):
     data = np.asarray(data)
 
