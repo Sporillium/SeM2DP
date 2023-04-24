@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance_matrix
 import cv2 as cv
 import argparse
+from sem2dp import des_descompress
 
 # Argument Parser:
 parser = argparse.ArgumentParser(description="Detect Loop Closures using M2DP Descriptor")
@@ -126,15 +127,28 @@ if USE_REG:
 
 if USE_SEM:  
     descriptors_sem = np.zeros((seq_len, 192))
+    sem_descriptors_sem = np.zeros((seq_len, 8192))
     with open('descriptor_texts/sem_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
         lines = file.readlines()
-    for i, line in zip(range(len(lines)), lines):
+        #print(len(lines))
+        des_lines = lines[::2]
+        sem_lines = lines[1::2]
+    for i in range(len(des_lines)):
         try:
-            des = np.fromstring(line.strip('[]\n'), sep=';')
-            descriptors_sem[i, :] = des
+            des = np.fromstring(des_lines[i].strip('[]\n'), sep=';')
+            #print(des)
         except:
             print(i)
-            print(line)
+            print(des_lines[i])
+
+        try:
+            sem_des = np.fromstring(sem_lines[i].strip('[]\n'), sep=';').astype(np.uint8)
+        except:
+            print(i)
+            print(sem_lines[i])
+        sem_des_decomp = des_descompress(sem_des)
+        descriptors_sem[i, :] = des
+        sem_descriptors_sem[i, :] = sem_des_decomp
     print("VISUAL-SEMANTIC DESCRIPTORS LOADED")
     descriptors_sem = descriptors_sem.astype(np.float32)
     precision_sem = []
