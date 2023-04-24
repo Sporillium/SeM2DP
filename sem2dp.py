@@ -3,10 +3,8 @@
 # Class implementing SeM2DP Descriptor
 
 import numpy as np
-import math
-import matplotlib.pyplot as plt
-import itertools as it
 from sklearn.decomposition import PCA
+#from m2dp import createDescriptor
 
 # Parameters for M2DP
 P = 4 # Azimuth angles [0, pi/p, 2pi/p ... pi] default 4
@@ -14,273 +12,152 @@ Q = 16 # Altitude angles [0, pi/2q, 2pi/2q ... pi/2] default 16
 L = 8 # Number of concentric circles [l^2r, (l-1)^2r ... 2^2r, r] default 8
 T = 16 # Number of bins per circle default 16
 
-class sem2dp:
-    # Constructor
-    def __init__(self, P=P, Q=Q, L=L, T=T):
-        self.p = P
-        self.q = Q
-        self.l = L
-        self.t = T
-        self.A = np.zeros((P*Q, 2*T*L))
+def createSemDescriptor(data, semantics, T=16, L=8, P=4, Q=16):
+    # Seperate semantic labels from 3D Points:
 
-        self.point_cloud = None
-        self.mod_cloud = None
+    data = np.asarray(data)
+    semantics = np.asarray(semantics)
 
-        self.centroid = None
-        self.x_axis = None
-        self.y_axis = None
+    numT = T
+    numR = L
+    numP = P
+    numQ = Q
+
+    data_rot = PCARotationInvariant(data)
+
+    azimuthList = np.linspace(-np.pi/2, np.pi, numP)
+    elevationList = np.linspace(0,np.pi/2, numQ)
+
+    rho2 = np.sum(np.power(data_rot, 2), 1)
+    maxRho = np.sqrt(max(rho2))
+
+    # Reintroduce the semantic information here
+    A, S = GetSignatureMatrix(azimuthList, elevationList, data_rot, semantics, numT, numR, maxRho)
+    u,s,vh = np.linalg.svd(A)
+    desM2DP  = np.concatenate((u[:,0], vh[0,:]))
+
+    return desM2DP, np.ravel(S).astype(np.uint8)
+
+def PCARotationInvariant(data):
+    n = data.shape[0]
+
+    md = np.mean(data, 0)
+
+    data = data - np.tile(md,(n,1))
+
+    pca = PCA(n_components=3)
+    pca.fit(data)
+
+    x_component = pca.components_[0, :]
+    y_component = pca.components_[1, :]
+    z_component = pca.components_[2, :]
+
+    X = np.matmul(x_component, data.T)
+    Y = np.matmul(y_component, data.T)
+    Z = np.matmul(z_component, data.T)
+
+    data_trans = np.array([X, Y, Z])
     
-    # Methods
-    def readCloud(self, cloud):
-        """
-        Reads in point external point cloud
+    return data_trans.T
 
-        Parameters:
-        ----------
-            point_cloud: Array of 3D points expressed in (x, y, z)
+def GetSignatureMatrix(azimuthList, elevationList, data, semantics, numT, numR, maxRho):
+    A = np.zeros((len(azimuthList)*len(elevationList),numT*numR))
+    S = np.zeros((len(azimuthList)*len(elevationList),numT*numR))
+    n = 0
 
-        Returns:
-        ----------
-            None
-        """
-        self.point_cloud = cloud
+    thetaList = np.linspace(-np.pi,np.pi,numT+1)
 
-    def centroidPointCloud(self):
-        """
-        Calulates the Centroid of the Point Cloud, and shifts the origin to the centroid
+    rhoList = np.linspace(0,np.sqrt(maxRho),numR+1)
+    rhoList = rhoList**2
+    rhoList[-1] = rhoList[-1] + 0.001
 
-        Parameters:
-        ----------
-            None
+    for azm in azimuthList:
+        for elv in elevationList:
+            vecN = sph2cart(azm,elv,1)
 
-        Returns:
-        ----------
-            None
-        """
-        x = []
-        y = []
-        z = []
-        tot = []
-        labs = []
-        for point in self.point_cloud:
-            loc = point.location
-            lab = point.label
-            tot.append(loc)
-            labs.append(lab)
-            x.append(loc[0])
-            y.append(loc[1])
-            z.append(loc[2])
-        
-        x_cent = sum(x)/len(self.point_cloud)
-        y_cent = sum(y)/len(self.point_cloud) 
-        z_cent = sum(z)/len(self.point_cloud)
+            h = np.matmul(np.array([1, 0, 0]), vecN.T)
+            c = h*vecN
 
-        self.centroid = np.array([x_cent, y_cent, z_cent])
-        
-        for i in range(len(tot)):
-            tot[i] = tot[i] - self.centroid
-        
-        self.mod_cloud = tot
-        self.label_map = labs
-        #print(self.label_map)
-    
-    def cloudAxes(self):
-        """
-        Performs PCA using scikit_learn. Creates the axes used by M2DP using the 1st and 2nd PC's
+            px = np.array([1, 0, 0]) - c
+            py = np.cross(vecN, px)
 
-        Parameters:
-        ----------
-            None
-
-        Returns:
-        ----------
-            None
-        """
-        pca = PCA(n_components=3)
-        pca.fit(self.mod_cloud)
-
-        self.x_axis = pca.components_[(0)]
-        self.y_axis = pca.components_[(1)]
-    
-    def projectPoints(self):
-        """
-        Projects the points from the point cloud onto a series of planes
-
-        Parameters:
-        ----------
-            None
-
-        Returns:
-        ----------
-            None
-        """
-        theta = np.linspace(0, np.pi, self.p)
-        phi = np.linspace(0, np.pi/2, self.q)
-
-        for th in theta:
-            for ph in phi:
-                x = np.cos(ph)*np.cos(th)
-                y = np.cos(ph)*np.sin(th)
-                z = np.sin(ph)
-
-                norm = np.array([x, y, z])
-                print(norm)
-
-                dist_x = np.dot(self.x_axis, norm)
-                proj_x = self.x_axis - (dist_x*norm)
-                
-                # Construct Perpendicular Axis
-                proj_y = np.cross(proj_x, norm)
-
-                # Construct basis vectors:
-                norm_x = proj_x/np.linalg.norm(proj_x)
-                norm_y = proj_y/np.linalg.norm(proj_y)
-
-                proj_cloud = []
-                for point in self.mod_cloud:
-                    dist = np.dot(point, norm)
-                    proj = point - (dist*norm)
-                    proj_cloud.append(proj)
-                
-                flat_cloud = []
-                for point in proj_cloud:
-                    point_x = np.dot(point, norm_x)
-                    point_y = np.dot(point, norm_y)
-                    flat_cloud.append(np.array([point_x, point_y]))
-
-                max_dist = 0
-                for point in flat_cloud:
-                    dist = math.dist([0,0], point)
-                    if dist > max_dist:
-                        max_dist = dist
-                
-                print(max_dist)
-
-                #self.plotCloud(proj_cloud, proj_x, proj_y, norm)
-                self.plotProjection(flat_cloud, max_dist)
-                plt.show()
-    
-    def calculateDescriptor(self):
-        """
-        Projects the points from the point cloud onto a series of planes, and calculates the 
-        M2DP descriptor from the various projections
-
-        Parameters:
-        ----------
-            None
-
-        Returns:
-        ----------
-            d: Vector of values that serves as the descriptor of the scene, of shape [(P*Q + L*T), 1]
-        """
-        theta = np.linspace(0, np.pi, self.p)
-        phi = np.linspace(0, np.pi/2, self.q)
-        bins = np.linspace(0, np.pi*2, self.t+1)
-
-        for th,ph in it.product(range(len(theta)), range(len(phi))):
-                
-            # Construct Surface normal
-            x = np.cos(phi[ph])*np.cos(theta[th])
-            y = np.cos(phi[ph])*np.sin(theta[th])
-            z = np.sin(phi[ph])
-            norm = np.array([x, y, z])
-
-            dist_x = np.dot(self.x_axis, norm)
-            proj_x = self.x_axis - (dist_x*norm)
+            pdata = np.transpose(np.array([data@px, data@py]))
             
-            # Construct Perpendicular Axis
-            proj_y = np.cross(proj_x, norm)
+            theta,rho = cart2pol(pdata[:,0], pdata[:,1])
 
-            # Construct basis vectors:
-            norm_x = proj_x/np.linalg.norm(proj_x)
-            norm_y = proj_y/np.linalg.norm(proj_y)
+            #print(theta.shape, rho.shape, semantics.shape)
 
-            # Project cloud onto plane and change basis to planar coordinates
-            flat_cloud = []
-            for point in self.mod_cloud:
-                dist = np.dot(point, norm)
-                proj = point - (dist*norm)
-                point_x = np.dot(proj, norm_x)
-                point_y = np.dot(proj, norm_y)
-                point_rad = math.dist([0,0],[point_x, point_y])
-                point_theta = math.atan2(point_x, point_y)
-                flat_cloud.append(np.array([point_rad, point_theta]))
+            input_array = np.vstack((rho, theta, semantics))
 
-            # Find the furthest point from Origin, and define biggest circle
-            max_dist = 0
-            for point in flat_cloud:
-                if point[0] > max_dist:
-                    max_dist = point[0]
-            
-            # Define circles
-            r = max_dist/(self.l**2)
-            circles = [0]
-            for i in range(1, self.l, 1):
-                rads = (i**2)*r
-                circles.append(rads)
-            circles.append(max_dist)
+            #print(input_array.shape)
+ 
+            bins, edges = np.histogramdd(input_array.T, bins=(rhoList, thetaList, 150))
+            #print(bins.shape)
+            proj_bins = np.sum(bins, axis=2)
+            #print(proj_bins.shape)
 
-            # for c in range(1, len(circles), 1):
-            #     for b in range(1, len(bins), 1):
-            bin_labs = []
-            list_counts = []
-            list_labs = []
-            for c,b in it.product(range(1, len(circles), 1), range(1, len(bins), 1)):
-                in_bin = [p for p in flat_cloud if circles[c] >= p[0] > circles[c-1] and bins[b] >= p[1] > bins[b-1]]
-                for i in range(len(flat_cloud)): 
-                    if (circles[c] >= flat_cloud[i][0] > circles[c-1]) and (bins[b] >= flat_cloud[i][1] > bins[b-1]):
-                        lab = self.label_map[i]
-                        bin_labs.append(lab)
-                    
-                if len(bin_labs) == 0:
-                    label = 0
-                else:
-                    label = mostFrequent(bin_labs)
-                
-                list_counts.append(len(in_bin))
-                list_labs.append(label)
-            combo_list = [None]*(len(list_counts)+len(list_labs))
-            combo_list[::2] = list_counts
-            combo_list[1::2] = list_labs
-            combo = np.asarray(combo_list)
-            self.A[(th*self.q + ph), :] = combo
-        
-        #print(A)
-        u, s, vh = np.linalg.svd(self.A)
-        #print(u.shape)
-        #print(u)
-        #print("\n\n")
-        #print(vh.shape)
-        #print(vh)
-        #print("\n\n")
-        d = np.concatenate((u.T[0,:], vh[0,:])).T
-        #print(d.shape)
-        return d
+            bin_labs = np.argmax(bins, axis=2)
+
+            bin = np.ravel(proj_bins)
+            labs = np.ravel(bin_labs)
+
+            A[n, :] = bin
+            S[n,:] = labs
+            n += 1
     
-    def extractAndProcess(self, point_cloud):
-        """
-        Makes a general call to all processing methods in the M2DP class, and processes a given point cloud into a descriptor 
+    return A, S
 
-        Parameters:
-        ----------
-            point_cloud: Array or list of points in point cloud with 3D coordinates
+def sph2cart(ph, th, rad):
+    x = rad*np.cos(ph)*np.cos(th)
+    y = rad*np.cos(ph)*np.sin(th)
+    z = rad*np.sin(ph)
+    return np.array([x, y, z])
 
-        Returns:
-        ----------
-            descriptor: Vector of values that serves as the descriptor of the scene, of shape [(P*Q + L*T), 1]
-        """
-        # Read the point cloud into the object memory
-        self.readCloud(point_cloud)
+def cart2pol(x, y):
+    rad = np.sqrt(x**2 + y**2)
+    th = np.arctan2(x, y)
+    return th, rad
 
-        # Calculate the centroid of the point cloud
-        self.centroidPointCloud()
+def des_compress(descriptor):
+    new_des = []
+    zero_flag = False
+    count = 0
+    for val in descriptor:
+        if val != 0 and zero_flag == False:
+            new_des.append(val)
 
-        # Define the principle axes of the point cloud using PCA
-        self.cloudAxes()
+        elif val != 0 and zero_flag == True:
+            zero_flag = False
+            new_des.append(count)
+            count = 0
+            new_des.append(val)
 
-        # Generate the descriptor using planar projection, and return
-        descriptor = self.calculateDescriptor()
-        return descriptor
+        elif val == 0 and zero_flag == False:
+            zero_flag = True
+            new_des.append(256)
+            count += 1
 
-def mostFrequent(List):
-    return max(set(List), key=List.count)
+        elif val == 0 and zero_flag == True:
+            count += 1
+    
+    return np.asarray(new_des)
+
+def des_descompress(descriptor):
+    new_des = np.zeros(8192)
+    zero_flag = False
+    pointer = 0
+    for val in descriptor:
+        if val != 256 and zero_flag == False:
+            new_des[pointer] = val
+            pointer += 1
+        
+        elif val != 256 and zero_flag == True:
+            pointer += val
+            zero_flag = False
+
+        elif val == 256 and zero_flag == False:
+            zero_flag = True
+    
+    return new_des
+ 
+            
