@@ -56,13 +56,22 @@ class CloudProcessor:
             point = MeasuredPoint(mean, cov, sem_dist=dist, left_descriptor=descL, right_descriptor=descR)
             points.append(point)
         
+        #print("Total points before filtering: ", len(points))
         if filter_unclear_classes:
             points = self.stereo_extractor.excludeUncertainLabels(points)
         
         if filter_dynamic_classes:
             points = self.stereo_extractor.excludeDynamicLabels(points)
         
-        return points
+        #print("Total points after filtering: ", len(points))
+
+        point_locs = np.zeros((len(points), 3))
+        semantics = np.zeros((len(points)))
+        for point, i in zip(points, range(len(points))):
+            point_locs[i, :] = point.location
+            semantics[i] = point.label
+
+        return point_locs, semantics
     
     def processFrameNoSemantics(self, img):
         """
