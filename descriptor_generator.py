@@ -7,7 +7,7 @@ import cloud
 import lidar
 
 from m2dp import createDescriptor
-from sem2dp import createSemDescriptor, des_compress, des_descompress
+from sem2dp import createSemDescriptor, des_compress
 
 # Python Package imports
 import numpy as np
@@ -63,10 +63,10 @@ if USE_SEM and not USE_VELO:
         with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'w') as file:
             for im in trange(seq_leng):
                 point_cloud, labels = cloud_engine.processFrame(im)
-                descriptor, sem_descriptor = createSemDescriptor(point_cloud, labels)
+                descriptors[im], sem_descriptor = createSemDescriptor(point_cloud, labels)
                 comp_sem_descriptor = des_compress(sem_descriptor)
-                line1 = np.array2string(descriptor, max_line_width=10000, separator=';')
-                line2 = np.array2string(comp_sem_descriptor, max_line_width=10000, separator=';', threshold=10000)
+                line1 = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
                 file.write(line1+"\n"+line2+"\n")
     else:
         with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'a') as file:
@@ -75,7 +75,7 @@ if USE_SEM and not USE_VELO:
                 descriptor, sem_descriptor = createSemDescriptor(point_cloud, labels)
                 comp_sem_descriptor = des_compress(sem_descriptor)
                 line1 = np.array2string(descriptor, max_line_width=10000, separator=';')
-                line2 = np.array2string(comp_sem_descriptor, max_line_width=10000, separator=';', threshold=10000)
+                line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
                 file.write(line1+"\n"+line2+"\n")
 
     print(len(descriptors))
