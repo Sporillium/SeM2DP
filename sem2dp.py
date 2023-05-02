@@ -4,6 +4,7 @@
 
 import numpy as np
 from sklearn.decomposition import PCA
+from scipy.spatial.distance import cdist
 #from m2dp import createDescriptor
 
 # Parameters for M2DP
@@ -12,7 +13,7 @@ Q = 16 # Altitude angles [0, pi/2q, 2pi/2q ... pi/2] default 16
 L = 8 # Number of concentric circles [l^2r, (l-1)^2r ... 2^2r, r] default 8
 T = 16 # Number of bins per circle default 16
 
-def createSemDescriptor(data, semantics, T=16, L=8, P=4, Q=16):
+def createSemDescriptor(data, semantics, T=8, L=4, P=4, Q=16):
     # Seperate semantic labels from 3D Points:
 
     data = np.asarray(data)
@@ -32,11 +33,9 @@ def createSemDescriptor(data, semantics, T=16, L=8, P=4, Q=16):
     maxRho = np.sqrt(max(rho2))
 
     # Reintroduce the semantic information here
-    A, S = GetSignatureMatrix(azimuthList, elevationList, data_rot, semantics, numT, numR, maxRho)
-    u,s,vh = np.linalg.svd(A)
-    desM2DP  = np.concatenate((u[:,0], vh[0,:]))
+    S = GetSignatureMatrix(azimuthList, elevationList, data_rot, semantics, numT, numR, maxRho)
 
-    return desM2DP, np.ravel(S).astype(np.uint8)
+    return np.ravel(S).astype(np.uint8)
 
 def PCARotationInvariant(data):
     n = data.shape[0]
@@ -80,32 +79,20 @@ def GetSignatureMatrix(azimuthList, elevationList, data, semantics, numT, numR, 
 
             px = np.array([1, 0, 0]) - c
             py = np.cross(vecN, px)
-
             pdata = np.transpose(np.array([data@px, data@py]))
             
             theta,rho = cart2pol(pdata[:,0], pdata[:,1])
-
-            #print(theta.shape, rho.shape, semantics.shape)
-
             input_array = np.vstack((rho, theta, semantics))
 
-            #print(input_array.shape)
- 
             bins, edges = np.histogramdd(input_array.T, bins=(rhoList, thetaList, 150))
-            #print(bins.shape)
-            proj_bins = np.sum(bins, axis=2)
-            #print(proj_bins.shape)
-
             bin_labs = np.argmax(bins, axis=2)
 
-            bin = np.ravel(proj_bins)
             labs = np.ravel(bin_labs)
 
-            A[n, :] = bin
             S[n,:] = labs
             n += 1
     
-    return A, S
+    return S
 
 def sph2cart(ph, th, rad):
     x = rad*np.cos(ph)*np.cos(th)
@@ -118,46 +105,27 @@ def cart2pol(x, y):
     th = np.arctan2(x, y)
     return th, rad
 
-def des_compress(descriptor):
+def des_compress_new(descriptor):
     new_des = []
-    zero_flag = False
-    count = 0
-    for val in descriptor:
-        if val != 0 and zero_flag == False:
+    for val, i in zip(descriptor, range(descriptor.shape[0])):
+        if val != 0:
+            new_des.append(i)
             new_des.append(val)
-
-        elif val != 0 and zero_flag == True:
-            zero_flag = False
-            new_des.append(count)
-            count = 0
-            new_des.append(val)
-
-        elif val == 0 and zero_flag == False:
-            zero_flag = True
-            new_des.append(256)
-            count += 1
-
-        elif val == 0 and zero_flag == True:
-            count += 1
-    
     return np.asarray(new_des)
 
-def des_descompress(descriptor):
+def des_decompress_new(descriptor):
     new_des = np.zeros(8192)
-    zero_flag = False
-    pointer = 0
-    for val in descriptor:
-        if val != 256 and zero_flag == False:
-            new_des[pointer] = val
-            pointer += 1
-        
-        elif val != 256 and zero_flag == True:
-            pointer += val
-            zero_flag = False
-
-        elif val == 256 and zero_flag == False:
-            zero_flag = True
-    
+    indicies = descriptor[::2]
+    values = descriptor[1::2]
+    new_des[indicies] = values
     return new_des
+
+def hamming_compare(base_descriptor, other_descriptors):
+    n = other_descriptors.shape[0]
+    base_descriptor = np.tile(base_descriptor,(n,1))
+    
+    dists = (base_descriptor != other_descriptors).sum(1) / other_descriptors.shape[1]
+    
+    return dists
  
             
