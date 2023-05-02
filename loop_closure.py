@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance_matrix
 import cv2 as cv
 import argparse
-from sem2dp import des_descompress
+from sem2dp import des_decompress_new, hamming_compare
+
+#np.set_printoptions(threshold=10000)
 
 # Argument Parser:
 parser = argparse.ArgumentParser(description="Detect Loop Closures using M2DP Descriptor")
@@ -38,9 +40,10 @@ if (USE_REG or USE_SEM or USE_VELO or USE_VELO_SEM) is False:
 match_boundary = 50 # Number of frames before/after matching can occur
 gt_threshold = 10.0
 SEARCH_RANGE = 1.0
-SEARCH_INTERVAL = 0.0005
+SEARCH_INTERVAL = 0.005
 
 matcher = cv.BFMatcher_create(cv.NORM_L2)
+matcher_sem = cv.BFMatcher_create(cv.NORM_HAMMING)
 
 def evaluate_match(input_descriptor, cloud_ids, distances):
     # Define values:
@@ -89,6 +92,68 @@ def evaluate_match(input_descriptor, cloud_ids, distances):
 
     return prec, rec
 
+def evaluate_match_sem(input_descriptors_normal, input_descriptors_sem, cloud_ids, distances):
+    # Define values:
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+    for id in cloud_ids:
+        base_cloud = input_descriptors_normal[id,:].reshape((1, 192))
+        base_sem = input_descriptors_sem[id,:].reshape((1, 8192))
+
+        # Create our search space:
+        if id-match_boundary <= 0:
+            continue
+        else:
+            valid_descriptors_normal = input_descriptors_normal[:id-match_boundary,:]
+            valid_descriptors_sem = input_descriptors_sem[:id-match_boundary,:]
+            valid_ids = cloud_ids[:id-match_boundary]
+
+        # Calculate the Hamming distances between the base and all the valid    
+        hamming_distances = hamming_compare(base_sem, valid_descriptors_sem)
+        #match_result_sem = matcher_sem.match(base_sem, valid_descriptors_sem)
+        #print(len(match_result_sem))
+        #hamming_distances = np.asarray([mat.distance for mat in match_result_sem])
+        #print(hamming_distances)
+        hamming_weights = 1/(1-hamming_distances)
+
+        # Modify our descriptor vectors based on the hamming distances
+        weighted_descriptors_normal = np.multiply(valid_descriptors_normal, hamming_weights[:, np.newaxis]).astype(np.float32)
+        #print(weighted_descriptors_normal, valid_descriptors_normal)
+        # Run matcher
+        match_result = matcher.match(base_cloud, weighted_descriptors_normal)
+        best_match = match_result[0]
+
+        matched_cloud_id = valid_ids[best_match.trainIdx]
+        match_distance = best_match.distance
+        #print(match_distance)
+
+        # Perform Evaluations:
+        dist_vector = distances[id, :id-match_boundary]
+        if match_distance <= thresh:
+            if dist_vector[matched_cloud_id] <= gt_threshold:
+                tp += 1
+            else:
+                fp += 1
+        else:
+            if dist_vector[matched_cloud_id] <= gt_threshold: 
+            # dist_vector[np.logical_and(dist_vector > 0.0, dist_vector < gt_threshold)].shape[0] > 0:
+                fn += 1
+            else:
+                tn += 1
+    try:
+        prec = tp/(tp+fp)
+    except:
+        prec = 1
+
+    try:
+        rec = tp/(tp+fn)
+    except:
+        rec = 0
+
+    return prec, rec
+
 def find_max_rec(prec_list, rec_list):
     prec = np.asarray(prec_list)
     rec = np.asarray(rec_list)
@@ -118,8 +183,8 @@ if USE_REG:
             des = np.fromstring(line.strip('[]\n'), sep=';')
             descriptors_reg[i, :] = des
         except:
-            print(i)
-            print(line)
+            print("Error opening Regular Descriptor: ",i)
+            #print(line)
     print("VISUAL DESCRIPTORS LOADED")
     descriptors_reg = descriptors_reg.astype(np.float32)
     precision_reg = []
@@ -138,19 +203,20 @@ if USE_SEM:
             des = np.fromstring(des_lines[i].strip('[]\n'), sep=';')
             #print(des)
         except:
-            print(i)
-            print(des_lines[i])
+            print("Error opening Vis-Sem Vis discriptor: ",i)
+            #print(des_lines[i])
 
         try:
             sem_des = np.fromstring(sem_lines[i].strip('[]\n'), sep=';').astype(np.uint8)
         except:
-            print(i)
-            print(sem_lines[i])
-        sem_des_decomp = des_descompress(sem_des)
+            print("Error opening Vis-Sem Sem discriptor: ",i)
+            #print(sem_lines[i])
+        sem_des_decomp = des_decompress_new(sem_des)
         descriptors_sem[i, :] = des
         sem_descriptors_sem[i, :] = sem_des_decomp
     print("VISUAL-SEMANTIC DESCRIPTORS LOADED")
     descriptors_sem = descriptors_sem.astype(np.float32)
+    sem_descriptors_sem = sem_descriptors_sem.astype(np.uint8)
     precision_sem = []
     recall_sem = []
 
@@ -163,8 +229,8 @@ if USE_VELO:
             des = np.fromstring(line.strip('[]\n'), sep=';')
             descriptors_velo[i, :] = des
         except:
-            print(i)
-            print(line)
+            print("Error opening Velo discriptor: ",i)
+            #print(line)
     print("VELODYNE DESCRIPTORS LOADED")
     descriptors_velo = descriptors_velo.astype(np.float32)
     precision_velo = []
@@ -172,16 +238,16 @@ if USE_VELO:
 
 if USE_VELO_SEM:  
     descriptors_velo_sem = np.zeros((seq_len, 192))
-    with open('descriptor_texts/velo_sem_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+    with open('descriptor_texts/mod_velo_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
         lines = file.readlines()
     for i, line in zip(range(len(lines)), lines):
         try:
             des = np.fromstring(line.strip('[]\n'), sep=';')
             descriptors_velo_sem[i, :] = des
         except:
-            print(i)
-            print(line)
-    print("VELODYNE DESCRIPTORS LOADED")
+            print("Error opening Mod-Velo discriptor: ",i)
+            #print(line)
+    print("MODIFIED VELODYNE DESCRIPTORS LOADED")
     descriptors_velo_sem = descriptors_velo_sem.astype(np.float32)
     precision_velo_sem = []
     recall_velo_sem = []
@@ -196,7 +262,7 @@ for thresh in tqdm(thresholds):
         precision_reg.append(prec_reg)
         recall_reg.append(rec_reg)
     if USE_SEM:
-        prec_sem, rec_sem = evaluate_match(descriptors_sem, cloud_ids, distances)
+        prec_sem, rec_sem = evaluate_match_sem(descriptors_sem, sem_descriptors_sem, cloud_ids, distances)
         precision_sem.append(prec_sem)
         recall_sem.append(rec_sem)
     if USE_VELO:
