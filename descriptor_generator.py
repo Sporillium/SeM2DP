@@ -116,8 +116,6 @@ if USE_SEM and USE_VELO: # Use Semantic Velodyne Point Cloud
                 line1 = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
                 file.write(line1+"\n"+line2+"\n")
-                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
-                file.write(line+"\n")
     else:
         with open("descriptor_texts/sem_velo_descriptors_kitti_"+seq_name+".txt", 'a') as file:
             for im in trange(resume, seq_leng):
@@ -130,10 +128,8 @@ if USE_SEM and USE_VELO: # Use Semantic Velodyne Point Cloud
                 line1 = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
                 file.write(line1+"\n"+line2+"\n")
-                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
-                file.write(line+"\n")
-    
     print(len(descriptors))
+    print(descriptor_size)
 
 if USE_MOD and USE_VELO: # Use Semantic Velodyne Point Cloud
     descriptors = {}
