@@ -13,8 +13,6 @@ L = 8 # Number of concentric circles [l^2r, (l-1)^2r ... 2^2r, r] default 8
 T = 16 # Number of bins per circle default 16
 
 def createSemDescriptor(data, semantics, T=8, L=4, P=4, Q=16):
-    # Seperate semantic labels from 3D Points:
-
     data = np.asarray(data)
     semantics = np.asarray(semantics)
 
