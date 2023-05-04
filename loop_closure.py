@@ -42,6 +42,8 @@ gt_threshold = 10.0
 SEARCH_RANGE = 1.0
 SEARCH_INTERVAL = 0.005
 
+des_size = 2048
+
 matcher = cv.BFMatcher_create(cv.NORM_L2)
 matcher_sem = cv.BFMatcher_create(cv.NORM_HAMMING)
 
@@ -100,7 +102,7 @@ def evaluate_match_sem(input_descriptors_normal, input_descriptors_sem, cloud_id
     fn = 0
     for id in cloud_ids:
         base_cloud = input_descriptors_normal[id,:].reshape((1, 192))
-        base_sem = input_descriptors_sem[id,:].reshape((1, 8192))
+        base_sem = input_descriptors_sem[id,:].reshape((1, des_size))
 
         # Create our search space:
         if id-match_boundary <= 0:
@@ -160,6 +162,11 @@ def find_max_rec(prec_list, rec_list):
 
     return np.max(rec[prec >= 1.0])
     
+def average_precision(prec, rec):
+    av_prec = 0
+    for i in range(len(prec)-1):
+        av_prec += (rec[i+1]-rec[i])*prec[i+1]
+    return av_prec
 
 # Load Poses for GT Loop closures
 poses = np.loadtxt('/home/march/devel/datasets/Kitti/odometry-2012/poses/'+seq_name+'.txt')
@@ -192,7 +199,7 @@ if USE_REG:
 
 if USE_SEM:  
     descriptors_sem = np.zeros((seq_len, 192))
-    sem_descriptors_sem = np.zeros((seq_len, 8192))
+    sem_descriptors_sem = np.zeros((seq_len, des_size))
     with open('descriptor_texts/sem_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
         lines = file.readlines()
         #print(len(lines))
@@ -211,7 +218,7 @@ if USE_SEM:
         except:
             print("Error opening Vis-Sem Sem discriptor: ",i)
             #print(sem_lines[i])
-        sem_des_decomp = des_decompress_new(sem_des)
+        sem_des_decomp = des_decompress_new(sem_des, des_size)
         descriptors_sem[i, :] = des
         sem_descriptors_sem[i, :] = sem_des_decomp
     print("VISUAL-SEMANTIC DESCRIPTORS LOADED")
@@ -285,19 +292,19 @@ ax.set_xlabel("Recall")
 ax.set_ylabel("Precision")
 if USE_REG:
     reg_key, = ax.plot(recall_reg, precision_reg,  'b-')
-    reg_key.set_label("Visual")
+    reg_key.set_label("Visual (AP="+f'{average_precision(precision_reg, recall_reg):03}'+")")
     print("Visual Recall @ 100% Precision: "+f'{find_max_rec(precision_reg, recall_reg)}')
 if USE_SEM:
     sem_key, = ax.plot(recall_sem, precision_sem,  'g-')
-    sem_key.set_label("Visual-Semantic")
+    sem_key.set_label("Visual-Semantic (AP="+f'{average_precision(precision_sem, recall_sem):03}'+")")
     print("Visual-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_sem, recall_sem)}')
 if USE_VELO:
     velo_key, = ax.plot(recall_velo, precision_velo,  'r-')
-    velo_key.set_label("Velodyne")
+    velo_key.set_label("Velodyne (AP="+f'{average_precision(precision_velo, recall_velo):03}'+")")
     print("Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_velo, recall_velo)}')
 if USE_VELO_SEM:
     velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'y-')
-    velo_sem_key.set_label("Velodyne-Semantic")
+    velo_sem_key.set_label("Velodyne-Semantic (AP="+f'{average_precision(precision_velo_sem, recall_velo_sem):03}'+")")
     print("Velodyne-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_velo_sem, recall_velo_sem)}')
 ax.grid()
 ax.legend()
