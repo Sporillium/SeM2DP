@@ -20,6 +20,7 @@ parser.add_argument('-n', '--number', required=True, type=int, help="Specify seq
 parser.add_argument('-r', '--resume', type=int, help="Set a specific frame to resume execution from") # Resume frame
 parser.add_argument('-s', '--use_sem', action='store_true', help="Set flag to use semantic information for descriptor generation") #Use Sem True/False
 parser.add_argument('-v', '--use_velodyne', action='store_true', help="Set flag to use Velodyne data for descriptor generation") #Use Velo True/False
+parser.add_argument('-m', '--use_modified', action='store_true', help="Set flag to use Modified Velodyne data for descriptor generation") # Use Mod Velo True/False
 
 args = parser.parse_args()
 
@@ -27,6 +28,7 @@ args = parser.parse_args()
 SEQ_NUM = args.number
 USE_SEM = args.use_sem
 USE_VELO = args.use_velodyne
+USE_MOD = args.use_modified
 resume = args.resume
 
 # ----- Main Execution Starts here -----
@@ -41,7 +43,7 @@ seq_name = f'{SEQ_NUM:02}'
 
 #pool = multiprocessing.Pool(6)
 
-if not USE_SEM and not USE_VELO:
+if not USE_SEM and not USE_VELO: # Using Visual Point Clouds
     descriptors = {}
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
@@ -57,7 +59,7 @@ if not USE_SEM and not USE_VELO:
 
     print(len(descriptors))
 
-if USE_SEM and not USE_VELO:
+if USE_SEM and not USE_VELO: #Using Visual Semantic Point Clouds
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -83,7 +85,7 @@ if USE_SEM and not USE_VELO:
     print(len(descriptors))
     print(descriptor_size)
 
-if not USE_SEM and USE_VELO:
+if not USE_SEM and USE_VELO: # Use Velodyne Point Cloud
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -100,7 +102,40 @@ if not USE_SEM and USE_VELO:
                 line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 file.write(line+"\n")
 
-if USE_SEM and USE_VELO:
+if USE_SEM and USE_VELO: # Use Semantic Velodyne Point Cloud
+    descriptors = {}
+    if resume is None:
+        with open("descriptor_texts/sem_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud = velo_proc.createCloudSem(im)
+                labels = point_cloud[:,3]
+                point_cloud = point_cloud[:,:3]
+                descriptors[im] = createDescriptor(point_cloud)
+                sem_descriptor = createSemDescriptor(point_cloud, labels)
+                comp_sem_descriptor, descriptor_size = des_compress_new(sem_descriptor)
+                line1 = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
+                file.write(line1+"\n"+line2+"\n")
+                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                file.write(line+"\n")
+    else:
+        with open("descriptor_texts/sem_velo_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud = velo_proc.createCloudSem(im)
+                labels = point_cloud[:,3]
+                point_cloud = point_cloud[:,:3]
+                descriptors[im] = createDescriptor(point_cloud)
+                sem_descriptor = createSemDescriptor(point_cloud, labels)
+                comp_sem_descriptor, descriptor_size = des_compress_new(sem_descriptor)
+                line1 = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
+                file.write(line1+"\n"+line2+"\n")
+                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                file.write(line+"\n")
+    
+    print(len(descriptors))
+
+if USE_MOD and USE_VELO: # Use Semantic Velodyne Point Cloud
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/mod_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
