@@ -299,6 +299,39 @@ class StereoExtractor:
 
             return distL, distR
     
+    def semanticsMaxFromImages(self, im_no):
+        """
+        Extracts semantic distributions from pair of stereo images, and then returns the argmax for each pixel
+
+        Parameters:
+        ----------
+            im_no: ID Number of Image to Process
+            segmentation_engine: Object that can process the semantic segmentation
+        Returns:
+        ----------
+            segL: Argmax Matrix of left image
+            segR: Argmax Matris of right image
+        """
+        if self.cam_name != 'kitti':
+            print("Behavior not implemented!")
+            exit()
+        else:
+            image_str = f'{im_no:06}'
+
+            imgL = cv.imread(self.path_l+image_str+".png", cv.IMREAD_UNCHANGED)
+            imgR = cv.imread(self.path_r+image_str+".png", cv.IMREAD_UNCHANGED)
+            imgL = cv.cvtColor(imgL, cv.COLOR_BGR2RGB)
+            imgR = cv.cvtColor(imgR, cv.COLOR_BGR2RGB)
+
+            imgL_proc = cv.GaussianBlur(imgL, (5,5), 0)
+            imgR_proc = cv.GaussianBlur(imgR, (5,5), 0)
+
+            # segment images and get the correct outputs:
+            segL = self.seg_engine.segmentImageMax(imgL_proc)
+            segR = self.seg_engine.segmentImageMax(imgR_proc)
+
+            return segL, segR
+    
     def semanticFilter(self, matches, kp_left, kp_right, dist_l, dist_r, filter_threshold=0.5):
         """
         Applies a filter to point cloud based on semantic similarity between the left and right points
