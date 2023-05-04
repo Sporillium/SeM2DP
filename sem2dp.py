@@ -4,7 +4,6 @@
 
 import numpy as np
 from sklearn.decomposition import PCA
-from scipy.spatial.distance import cdist
 #from m2dp import createDescriptor
 
 # Parameters for M2DP
@@ -111,10 +110,10 @@ def des_compress_new(descriptor):
         if val != 0:
             new_des.append(i)
             new_des.append(val)
-    return np.asarray(new_des)
+    return np.asarray(new_des), descriptor.shape[0]
 
-def des_decompress_new(descriptor):
-    new_des = np.zeros(8192)
+def des_decompress_new(descriptor, des_size):
+    new_des = np.zeros(des_size)
     indicies = descriptor[::2]
     values = descriptor[1::2]
     new_des[indicies] = values
