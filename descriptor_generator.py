@@ -65,7 +65,7 @@ if USE_SEM and not USE_VELO:
                 point_cloud, labels = cloud_engine.processFrame(im)
                 descriptors[im] = createDescriptor(point_cloud)
                 sem_descriptor = createSemDescriptor(point_cloud, labels)
-                comp_sem_descriptor = des_compress_new(sem_descriptor)
+                comp_sem_descriptor, descriptor_size = des_compress_new(sem_descriptor)
                 line1 = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
                 file.write(line1+"\n"+line2+"\n")
@@ -75,12 +75,13 @@ if USE_SEM and not USE_VELO:
                 point_cloud, labels = cloud_engine.processFrame(im)
                 descriptors[im] = createDescriptor(point_cloud)
                 sem_descriptor = createSemDescriptor(point_cloud, labels)
-                comp_sem_descriptor = des_compress_new(sem_descriptor)
+                comp_sem_descriptor, descriptor_size = des_compress_new(sem_descriptor)
                 line1 = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
                 file.write(line1+"\n"+line2+"\n")
 
     print(len(descriptors))
+    print(descriptor_size)
 
 if not USE_SEM and USE_VELO:
     descriptors = {}
