@@ -45,6 +45,7 @@ SEARCH_RANGE = 1.0
 SEARCH_INTERVAL = 0.005
 
 des_size = 2048
+des_size_velo = 2048
 
 matcher = cv.BFMatcher_create(cv.NORM_L2)
 matcher_sem = cv.BFMatcher_create(cv.NORM_HAMMING)
@@ -96,7 +97,7 @@ def evaluate_match(input_descriptor, cloud_ids, distances):
 
     return prec, rec
 
-def evaluate_match_sem(input_descriptors_normal, input_descriptors_sem, cloud_ids, distances):
+def evaluate_match_sem(input_descriptors_normal, input_descriptors_sem, cloud_ids, distances, des_size):
     # Define values:
     tp = 0
     tn = 0
@@ -181,7 +182,6 @@ print("GT POSES LOADED")
 distances = distance_matrix(locations, locations)
 seq_len = len(locations)
 
-
 # Load Pre-computed Descriptors for Evaluation based on Flags:
 if USE_REG:  
     descriptors_reg = np.zeros((seq_len, 192))
@@ -263,8 +263,8 @@ if USE_MOD_VELO:
 
 if USE_VELO_SEM:  
     descriptors_velo_sem = np.zeros((seq_len, 192))
-    sem_descriptors_velo_sem = np.zeros((seq_len, des_size))
-    with open('descriptor_texts/sem_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+    sem_descriptors_velo_sem = np.zeros((seq_len, des_size_velo))
+    with open('descriptor_texts/sem_velo_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
         lines = file.readlines()
         #print(len(lines))
         des_lines = lines[::2]
@@ -282,9 +282,9 @@ if USE_VELO_SEM:
         except:
             print("Error opening Velo-Sem Sem discriptor: ",i)
             #print(sem_lines[i])
-        velo_sem_des_decomp = des_decompress_new(sem_des, des_size)
+        velo_sem_des_decomp = des_decompress_new(sem_des, des_size_velo)
         descriptors_velo_sem[i, :] = des
-        sem_descriptors_velo_sem[i, :] = sem_des_decomp
+        sem_descriptors_velo_sem[i, :] = velo_sem_des_decomp
     print("VELO-SEMANTIC DESCRIPTORS LOADED")
     descriptors_velo_sem = descriptors_velo_sem.astype(np.float32)
     sem_descriptors_velo_sem = sem_descriptors_velo_sem.astype(np.uint8)
@@ -301,7 +301,7 @@ for thresh in tqdm(thresholds):
         precision_reg.append(prec_reg)
         recall_reg.append(rec_reg)
     if USE_SEM:
-        prec_sem, rec_sem = evaluate_match_sem(descriptors_sem, sem_descriptors_sem, cloud_ids, distances)
+        prec_sem, rec_sem = evaluate_match_sem(descriptors_sem, sem_descriptors_sem, cloud_ids, distances, des_size)
         precision_sem.append(prec_sem)
         recall_sem.append(rec_sem)
     if USE_VELO:
@@ -313,11 +313,10 @@ for thresh in tqdm(thresholds):
         precision_mod_velo.append(prec_mod_velo)
         recall_mod_velo.append(rec_mod_velo)
     if USE_VELO_SEM:
-        prec_velo_sem, rec_velo_sem = evaluate_match_sem(descriptors_velo_sem, sem_descriptors_velo_sem, cloud_ids, distances)
+        prec_velo_sem, rec_velo_sem = evaluate_match_sem(descriptors_velo_sem, sem_descriptors_velo_sem, cloud_ids, distances, des_size_velo)
         precision_velo_sem.append(prec_velo_sem)
         recall_velo_sem.append(rec_velo_sem)
     
-
 # Plot the Curve
 print("\n\n")   
 fig = plt.figure()
@@ -343,7 +342,7 @@ if USE_MOD_VELO:
     mod_velo_key.set_label("Modified Velodyne(AP="+f'{average_precision(precision_mod_velo, recall_mod_velo):03}'+")")
     print("Modified Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_mod_velo, recall_mod_velo)}')
 if USE_VELO_SEM:
-    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'p-')
+    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'm-')
     velo_sem_key.set_label("Velodyne-Semantic(AP="+f'{average_precision(precision_velo_sem, recall_velo_sem):03}'+")")
     print("Velodyne-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_velo_sem, recall_velo_sem)}')
 ax.grid()
