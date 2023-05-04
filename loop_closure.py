@@ -16,6 +16,7 @@ parser.add_argument('-r', '--use_regular', action='store_true', help="Set flag t
 parser.add_argument('-s', '--use_sem', action='store_true', help="Set flag to use visual-semantic based descriptors") #Semantic-Visual Descriptors
 parser.add_argument('-v', '--use_velodyne', action='store_true', help="Set flag to use Velodyne-based descriptors") #Use Velo True/False
 parser.add_argument('-c', '--use_velo_sem', action='store_true', help="Set flag to use Velodyne-Semantic based descriptors") #Use VeloSem true_false
+parser.add_argument('-m', '--use_mod_velo', action='store_true', help="Set flag to use Modified Velodyne based descriptors") # Use Mod Velo true_false
 
 args = parser.parse_args()
 
@@ -25,6 +26,7 @@ SEQ_NUM = args.number
 USE_REG = args.use_regular
 USE_SEM = args.use_sem
 USE_VELO = args.use_velodyne
+USE_MOD_VELO = args.use_mod_velo
 USE_VELO_SEM = args.use_velo_sem
 
 seq_name = f'{SEQ_NUM:02}'
@@ -33,7 +35,7 @@ if SEQ_NUM > 10:
     print("NO GROUND TRUTH AVAILABLE FOR SEQUENCE " +seq_name+". PLEASE USE DIFFERENT SCRIPT")
     exit()
 
-if (USE_REG or USE_SEM or USE_VELO or USE_VELO_SEM) is False:
+if (USE_REG or USE_SEM or USE_VELO or USE_MOD_VELO) is False:
     print("AT LEAST ONE DESCRIPTOR TYPE MUST BE USED. PLEASE SEE HELP FOR DETAILS")
     exit()
 
@@ -243,19 +245,49 @@ if USE_VELO:
     precision_velo = []
     recall_velo = []
 
-if USE_VELO_SEM:  
-    descriptors_velo_sem = np.zeros((seq_len, 192))
+if USE_MOD_VELO:  
+    descriptors_mod_velo = np.zeros((seq_len, 192))
     with open('descriptor_texts/mod_velo_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
         lines = file.readlines()
     for i, line in zip(range(len(lines)), lines):
         try:
             des = np.fromstring(line.strip('[]\n'), sep=';')
-            descriptors_velo_sem[i, :] = des
+            descriptors_mod_velo[i, :] = des
         except:
             print("Error opening Mod-Velo discriptor: ",i)
             #print(line)
     print("MODIFIED VELODYNE DESCRIPTORS LOADED")
+    descriptors_mod_velo = descriptors_mod_velo.astype(np.float32)
+    precision_mod_velo = []
+    recall_mod_velo = []
+
+if USE_VELO_SEM:  
+    descriptors_velo_sem = np.zeros((seq_len, 192))
+    sem_descriptors_velo_sem = np.zeros((seq_len, des_size))
+    with open('descriptor_texts/sem_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+        lines = file.readlines()
+        #print(len(lines))
+        des_lines = lines[::2]
+        sem_lines = lines[1::2]
+    for i in range(len(des_lines)):
+        try:
+            des = np.fromstring(des_lines[i].strip('[]\n'), sep=';')
+            #print(des)
+        except:
+            print("Error opening Velo-Sem Vis discriptor: ",i)
+            #print(des_lines[i])
+
+        try:
+            sem_des = np.fromstring(sem_lines[i].strip('[]\n'), sep=';').astype(np.uint8)
+        except:
+            print("Error opening Velo-Sem Sem discriptor: ",i)
+            #print(sem_lines[i])
+        velo_sem_des_decomp = des_decompress_new(sem_des, des_size)
+        descriptors_velo_sem[i, :] = des
+        sem_descriptors_velo_sem[i, :] = sem_des_decomp
+    print("VELO-SEMANTIC DESCRIPTORS LOADED")
     descriptors_velo_sem = descriptors_velo_sem.astype(np.float32)
+    sem_descriptors_velo_sem = sem_descriptors_velo_sem.astype(np.uint8)
     precision_velo_sem = []
     recall_velo_sem = []
 
@@ -276,8 +308,12 @@ for thresh in tqdm(thresholds):
         prec_velo, rec_velo = evaluate_match(descriptors_velo, cloud_ids, distances)
         precision_velo.append(prec_velo)
         recall_velo.append(rec_velo)
+    if USE_MOD_VELO:
+        prec_mod_velo, rec_mod_velo = evaluate_match(descriptors_mod_velo, cloud_ids, distances)
+        precision_mod_velo.append(prec_mod_velo)
+        recall_mod_velo.append(rec_mod_velo)
     if USE_VELO_SEM:
-        prec_velo_sem, rec_velo_sem = evaluate_match(descriptors_velo_sem, cloud_ids, distances)
+        prec_velo_sem, rec_velo_sem = evaluate_match_sem(descriptors_velo_sem, sem_descriptors_velo_sem, cloud_ids, distances)
         precision_velo_sem.append(prec_velo_sem)
         recall_velo_sem.append(rec_velo_sem)
     
@@ -302,9 +338,13 @@ if USE_VELO:
     velo_key, = ax.plot(recall_velo, precision_velo,  'r-')
     velo_key.set_label("Velodyne (AP="+f'{average_precision(precision_velo, recall_velo):03}'+")")
     print("Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_velo, recall_velo)}')
+if USE_MOD_VELO:
+    mod_velo_key, = ax.plot(recall_mod_velo, precision_mod_velo,  'y-')
+    mod_velo_key.set_label("Modified Velodyne(AP="+f'{average_precision(precision_mod_velo, recall_mod_velo):03}'+")")
+    print("Modified Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_mod_velo, recall_mod_velo)}')
 if USE_VELO_SEM:
-    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'y-')
-    velo_sem_key.set_label("Velodyne-Semantic (AP="+f'{average_precision(precision_velo_sem, recall_velo_sem):03}'+")")
+    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'p-')
+    velo_sem_key.set_label("Velodyne-Semantic(AP="+f'{average_precision(precision_velo_sem, recall_velo_sem):03}'+")")
     print("Velodyne-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_velo_sem, recall_velo_sem)}')
 ax.grid()
 ax.legend()
