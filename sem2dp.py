@@ -112,9 +112,9 @@ def des_compress_new(descriptor):
 
 def des_decompress_new(descriptor, des_size):
     new_des = np.zeros(des_size)
-    indicies = descriptor[::2]
+    indices = descriptor[::2]
     values = descriptor[1::2]
-    new_des[indicies] = values
+    new_des[indices] = values
     return new_des
 
 def hamming_compare(base_descriptor, other_descriptors):
@@ -124,5 +124,3 @@ def hamming_compare(base_descriptor, other_descriptors):
     dists = (base_descriptor != other_descriptors).sum(1) / other_descriptors.shape[1]
     
     return dists
- 
-            

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance_matrix
 import cv2 as cv
 import argparse
+from multiprocessing.pool import Pool
 from sem2dp import des_decompress_new, hamming_compare
 
 #np.set_printoptions(threshold=10000)
@@ -35,7 +36,7 @@ if SEQ_NUM > 10:
     print("NO GROUND TRUTH AVAILABLE FOR SEQUENCE " +seq_name+". PLEASE USE DIFFERENT SCRIPT")
     exit()
 
-if (USE_REG or USE_SEM or USE_VELO or USE_MOD_VELO) is False:
+if (USE_REG or USE_SEM or USE_VELO or USE_MOD_VELO or USE_VELO_SEM) is False:
     print("AT LEAST ONE DESCRIPTOR TYPE MUST BE USED. PLEASE SEE HELP FOR DETAILS")
     exit()
 
@@ -45,7 +46,7 @@ SEARCH_RANGE = 1.0
 SEARCH_INTERVAL = 0.005
 
 des_size = 2048
-des_size_velo = 2048
+des_size_velo = 8192
 
 matcher = cv.BFMatcher_create(cv.NORM_L2)
 matcher_sem = cv.BFMatcher_create(cv.NORM_HAMMING)

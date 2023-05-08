@@ -111,7 +111,7 @@ if USE_SEM and USE_VELO: # Use Semantic Velodyne Point Cloud
                 labels = point_cloud[:,3]
                 point_cloud = point_cloud[:,:3]
                 descriptors[im] = createDescriptor(point_cloud)
-                sem_descriptor = createSemDescriptor(point_cloud, labels)
+                sem_descriptor = createSemDescriptor(point_cloud, labels, T=16, L=8)
                 comp_sem_descriptor, descriptor_size = des_compress_new(sem_descriptor)
                 line1 = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 line2 = np.array2string(comp_sem_descriptor, max_line_width=50000, separator=';', threshold=10000)
