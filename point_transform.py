@@ -68,7 +68,7 @@ elif semantic_flag:
         file_name = f'{im:06}'
         point_cloud = velo_proc.createCloudProj(im)
         # Extract the semantic information
-        sem_L = stereo_extractor.semanticsMaxFromImages(im)
+        sem_L, img_L = stereo_extractor.semanticsMaxFromImages(im)
 
         # Project to image plane
         trans = P0@TR@point_cloud
@@ -87,8 +87,12 @@ elif semantic_flag:
         # Filter Points that land on the valid image plane
         pts2d_cam = pts2d_cam[:, (sem_L.shape[1] > pts2d_cam_x) & (pts2d_cam_x > 0) & (sem_L.shape[0] > pts2d_cam_y) & (pts2d_cam_y > 0)]
         pts3d_cam = pts3d_cam[:, (sem_L.shape[1] > pts2d_cam_x) & (pts2d_cam_x > 0) & (sem_L.shape[0] > pts2d_cam_y) & (pts2d_cam_y > 0)]
+
         sem_classes = sem_L[np.floor(pts2d_cam[1,:]).astype(np.int32), np.floor(pts2d_cam[0,:]).astype(np.int32)]
+        colors = img_L[np.floor(pts2d_cam[1,:]).astype(np.int32), np.floor(pts2d_cam[0,:]).astype(np.int32), :]
 
         pts3d_cam[3, :] = sem_classes
         pts3d_cam = pts3d_cam.T
-        pts3d_cam.astype(np.float32).tofile(save_path+file_name+'_sem.bin')
+        pts3d_cam = np.hstack((pts3d_cam, colors))
+
+        pts3d_cam.astype(np.float32).tofile(save_path+file_name+'.bin')
