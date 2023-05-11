@@ -100,9 +100,74 @@ def cart2pol(x, y):
     th = np.arctan2(x, y)
     return th, rad
 
+def createColorDescriptor(data, T=16, L=8, P=4, Q=16, J=16):
+    data = np.asarray(data)
+    pos_data = data[:, :3]
+    col_data = data[:,3:]
 
+    numT = T
+    numR = L
+    numP = P
+    numQ = Q
+    numC = J
 
+    data_rot = PCARotationInvariant(pos_data)
 
+    azimuthList = np.linspace(-np.pi/2, np.pi, numP)
+    elevationList = np.linspace(0,np.pi/2, numQ)
+
+    rho2 = np.sum(np.power(data_rot, 2), 1)
+    maxRho = np.sqrt(max(rho2))
+
+    A = GetSignatureMatrixColor(azimuthList, elevationList, data_rot, numT, numR, maxRho, col_data, numC)
+    u,s,vh = np.linalg.svd(A)
+    desM2DP  = np.concatenate((u[:,0], vh[0,:]))
+
+    return desM2DP
+
+def GetSignatureMatrixColor(azimuthList, elevationList, pos_data, numT, numR, maxRho, col_data, numC):
+    A = np.zeros((len(azimuthList)*len(elevationList),(numT*numR)+(numC*3*numR)))
+    n = 0
+
+    thetaList = np.linspace(-np.pi,np.pi,numT+1)
+
+    rhoList = np.linspace(0,np.sqrt(maxRho),numR+1)
+    rhoList = rhoList**2
+    rhoList[-1] = rhoList[-1] + 0.001
+
+    colList = np.linspace(0,256,numC+1)
+    col_R = col_data[:, 0]
+    col_G = col_data[:, 1]
+    col_B = col_data[:, 2]
+
+    for azm in azimuthList:
+        for elv in elevationList:
+            vecN = sph2cart(azm,elv,1)
+
+            h = np.matmul(np.array([1, 0, 0]), vecN.T)
+            c = h*vecN
+
+            px = np.array([1, 0, 0]) - c
+            py = np.cross(vecN, px)
+
+            pdata = np.transpose(np.array([pos_data@px, pos_data@py]))
+            
+            theta,rho = cart2pol(pdata[:,0], pdata[:,1])
+
+            space_bin, r_edges, deg_edges = np.histogram2d(rho, theta, bins=(rhoList, thetaList))
+            space_bin = np.ravel(space_bin)
+
+            R_bins, r_edges, cr_edges = np.histogram2d(rho, col_R, (rhoList, colList))
+            G_bins, r_edges, cg_edges = np.histogram2d(rho, col_G, (rhoList, colList))
+            B_bins, r_edges, cb_edges = np.histogram2d(rho, col_B, (rhoList, colList))
+
+            col_bins = np.hstack((R_bins, G_bins, B_bins))
+            col_bins = np.ravel(col_bins)
+
+            A[n, :] = np.concatenate((space_bin, col_bins), axis=0)
+            n += 1
+    
+    return A
                 
         
     
