@@ -310,6 +310,7 @@ class StereoExtractor:
         Returns:
         ----------
             segL: Argmax Matrix of left image
+            imgL: RGB Color Matrix of left image
         """
         if self.cam_name != 'kitti':
             print("Behavior not implemented!")
@@ -321,7 +322,7 @@ class StereoExtractor:
             imgL_proc = cv.GaussianBlur(imgL, (5,5), 0)
             # segment images and get the correct outputs:
             segL = self.seg_engine.segmentImageMax(imgL_proc)
-            return segL
+            return segL, imgL
     
     def semanticFilter(self, matches, kp_left, kp_right, dist_l, dist_r, filter_threshold=0.5):
         """
