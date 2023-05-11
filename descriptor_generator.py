@@ -6,7 +6,7 @@ import stereo
 import cloud
 import lidar
 
-from m2dp import createDescriptor
+from m2dp import createDescriptor, createColorDescriptor
 from sem2dp import createSemDescriptor, des_compress_new
 
 # Python Package imports
@@ -21,6 +21,7 @@ parser.add_argument('-r', '--resume', type=int, help="Set a specific frame to re
 parser.add_argument('-s', '--use_sem', action='store_true', help="Set flag to use semantic information for descriptor generation") #Use Sem True/False
 parser.add_argument('-v', '--use_velodyne', action='store_true', help="Set flag to use Velodyne data for descriptor generation") #Use Velo True/False
 parser.add_argument('-m', '--use_modified', action='store_true', help="Set flag to use Modified Velodyne data for descriptor generation") # Use Mod Velo True/False
+parser.add_argument('-c', '--use_color', action='store_true', help="Set flag to use color data for c-M2DP descriptor") # Use Color true / false
 
 args = parser.parse_args()
 
@@ -29,6 +30,7 @@ SEQ_NUM = args.number
 USE_SEM = args.use_sem
 USE_VELO = args.use_velodyne
 USE_MOD = args.use_modified
+USE_COL = args.use_color
 resume = args.resume
 
 # ----- Main Execution Starts here -----
@@ -43,7 +45,7 @@ seq_name = f'{SEQ_NUM:02}'
 
 #pool = multiprocessing.Pool(6)
 
-if not USE_SEM and not USE_VELO: # Using Visual Point Clouds
+if not USE_SEM and not USE_VELO and not USE_COL: # Using Visual Point Clouds
     descriptors = {}
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
@@ -146,6 +148,27 @@ if USE_MOD and USE_VELO: # Use Semantic Velodyne Point Cloud
                 point_cloud = velo_proc.createCloudMod(im)
                 descriptors[im] = createDescriptor(point_cloud)
                 line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                file.write(line+"\n")
+    
+    print(len(descriptors))
+
+if USE_COL and not USE_SEM:
+    descriptors = {}
+    if resume is None:
+        with open("descriptor_texts/color_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud = velo_proc.createCloudFull(im)
+                point_cloud = np.delete(point_cloud, 3, 1)
+                descriptors[im] = createColorDescriptor(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=50000, separator=';')
+                file.write(line+"\n")
+    else:
+        with open("descriptor_texts/color_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud = velo_proc.createCloudFull(im)
+                point_cloud = np.delete(point_cloud, 3, 1)
+                descriptors[im] = createColorDescriptor(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=50000, separator=';')
                 file.write(line+"\n")
     
     print(len(descriptors))
