@@ -47,12 +47,19 @@ class VelodyneProcessor:
 
     def createCloudMod(self, im_no):
         image_str = f'{im_no:06}'
-        cloud = np.fromfile(self.path_velo_mod+image_str+'.bin', dtype=np.float32).reshape((-1, 3))
+        cloud = np.fromfile(self.path_velo_mod+image_str+'.bin', dtype=np.float32).reshape((-1, 7))
+        cloud = cloud[:, :3]
         return cloud
 
     def createCloudSem(self, im_no):
         image_str = f'{im_no:06}'
-        cloud = np.fromfile(self.path_velo_sem+image_str+'_sem.bin', dtype=np.float32).reshape((-1, 4))
+        cloud = np.fromfile(self.path_velo_mod+image_str+'.bin', dtype=np.float32).reshape((-1, 7))
+        cloud = cloud[:, :4]
+        return cloud
+    
+    def createCloudFull(self, im_no):
+        image_str = f'{im_no:06}'
+        cloud = np.fromfile(self.path_velo_mod+image_str+'.bin', dtype=np.float32).reshape((-1, 7))
         return cloud
 
 class Point:
