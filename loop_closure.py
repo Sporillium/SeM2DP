@@ -16,8 +16,9 @@ parser.add_argument('-n', '--number', required=True, type=int, help="Specify seq
 parser.add_argument('-r', '--use_regular', action='store_true', help="Set flag to use visual-based descriptors") # Visual Descriptors
 parser.add_argument('-s', '--use_sem', action='store_true', help="Set flag to use visual-semantic based descriptors") #Semantic-Visual Descriptors
 parser.add_argument('-v', '--use_velodyne', action='store_true', help="Set flag to use Velodyne-based descriptors") #Use Velo True/False
-parser.add_argument('-c', '--use_velo_sem', action='store_true', help="Set flag to use Velodyne-Semantic based descriptors") #Use VeloSem true_false
+parser.add_argument('-x', '--use_velo_sem', action='store_true', help="Set flag to use Velodyne-Semantic based descriptors") #Use VeloSem true_false
 parser.add_argument('-m', '--use_mod_velo', action='store_true', help="Set flag to use Modified Velodyne based descriptors") # Use Mod Velo true_false
+parser.add_argument('-c', '--use_color', action='store_true', help="Set flag to use c-M2DP descriptors") # Use Color true_false
 
 args = parser.parse_args()
 
@@ -29,6 +30,7 @@ USE_SEM = args.use_sem
 USE_VELO = args.use_velodyne
 USE_MOD_VELO = args.use_mod_velo
 USE_VELO_SEM = args.use_velo_sem
+USE_COLOR = args.use_color
 
 seq_name = f'{SEQ_NUM:02}'
 
@@ -47,18 +49,19 @@ SEARCH_INTERVAL = 0.005
 
 des_size = 2048
 des_size_velo = 8192
+des_size_col = 576
 
 matcher = cv.BFMatcher_create(cv.NORM_L2)
 matcher_sem = cv.BFMatcher_create(cv.NORM_HAMMING)
 
-def evaluate_match(input_descriptor, cloud_ids, distances):
+def evaluate_match(input_descriptor, cloud_ids, distances, des_size):
     # Define values:
     tp = 0
     tn = 0
     fp = 0
     fn = 0
     for id in cloud_ids:
-        base_cloud = input_descriptor[id,:].reshape((1,192))    
+        base_cloud = input_descriptor[id,:].reshape((1,des_size))    
         # Create valid matching set:
         if id-match_boundary <= 0:
             continue
@@ -292,13 +295,29 @@ if USE_VELO_SEM:
     precision_velo_sem = []
     recall_velo_sem = []
 
+if USE_COLOR:
+    descriptors_color = np.zeros((seq_len, 576))
+    with open('descriptor_texts/color_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+        lines = file.readlines()
+    for i, line in zip(range(len(lines)), lines):
+        try:
+            des = np.fromstring(line.strip('[]\n'), sep=';')
+            descriptors_color[i, :] = des
+        except:
+            print("Error opening color discriptor: ",i)
+            #print(line)
+    print("COLOR-VELO DESCRIPTORS LOADED")
+    descriptors_color = descriptors_color.astype(np.float32)
+    precision_color = []
+    recall_color = []
+
 cloud_ids = np.arange(seq_len)
 
 # Loop through distance Thresholds:
 thresholds = np.arange(0.0, SEARCH_RANGE, SEARCH_INTERVAL)
 for thresh in tqdm(thresholds):
     if USE_REG:
-        prec_reg, rec_reg = evaluate_match(descriptors_reg, cloud_ids, distances)
+        prec_reg, rec_reg = evaluate_match(descriptors_reg, cloud_ids, distances, 192)
         precision_reg.append(prec_reg)
         recall_reg.append(rec_reg)
     if USE_SEM:
@@ -306,17 +325,21 @@ for thresh in tqdm(thresholds):
         precision_sem.append(prec_sem)
         recall_sem.append(rec_sem)
     if USE_VELO:
-        prec_velo, rec_velo = evaluate_match(descriptors_velo, cloud_ids, distances)
+        prec_velo, rec_velo = evaluate_match(descriptors_velo, cloud_ids, distances, 192)
         precision_velo.append(prec_velo)
         recall_velo.append(rec_velo)
     if USE_MOD_VELO:
-        prec_mod_velo, rec_mod_velo = evaluate_match(descriptors_mod_velo, cloud_ids, distances)
+        prec_mod_velo, rec_mod_velo = evaluate_match(descriptors_mod_velo, cloud_ids, distances, 192)
         precision_mod_velo.append(prec_mod_velo)
         recall_mod_velo.append(rec_mod_velo)
     if USE_VELO_SEM:
         prec_velo_sem, rec_velo_sem = evaluate_match_sem(descriptors_velo_sem, sem_descriptors_velo_sem, cloud_ids, distances, des_size_velo)
         precision_velo_sem.append(prec_velo_sem)
         recall_velo_sem.append(rec_velo_sem)
+    if USE_COLOR:
+        prec_color, rec_color = evaluate_match(descriptors_color, cloud_ids, distances, des_size_col)
+        precision_color.append(prec_color)
+        recall_color.append(rec_color)
     
 # Plot the Curve
 print("\n\n")   
@@ -343,9 +366,13 @@ if USE_MOD_VELO:
     mod_velo_key.set_label("Modified Velodyne(AP="+f'{average_precision(precision_mod_velo, recall_mod_velo):03}'+")")
     print("Modified Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_mod_velo, recall_mod_velo)}')
 if USE_VELO_SEM:
-    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'm-')
+    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'y--')
     velo_sem_key.set_label("Velodyne-Semantic(AP="+f'{average_precision(precision_velo_sem, recall_velo_sem):03}'+")")
     print("Velodyne-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_velo_sem, recall_velo_sem)}')
+if USE_COLOR:
+    color_key, = ax.plot(recall_color, precision_color,  'm-')
+    color_key.set_label("Color-Velo(AP="+f'{average_precision(precision_color, recall_color):03}'+")")
+    print("Color-Velo Recall @ 100% Precision: "+f'{find_max_rec(precision_color, recall_color)}')
 ax.grid()
 ax.legend()
 ax.set_xlim([-0.01, 1.01])
