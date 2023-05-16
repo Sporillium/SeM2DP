@@ -4,7 +4,6 @@
 
 import numpy as np
 from sklearn.decomposition import PCA
-#from m2dp import createDescriptor
 
 # Parameters for M2DP
 P = 4 # Azimuth angles [0, pi/p, 2pi/p ... pi] default 4
@@ -31,8 +30,13 @@ def createSemDescriptor(data, semantics, T=8, L=4, P=4, Q=16):
 
     # Reintroduce the semantic information here
     S = GetSignatureMatrix(azimuthList, elevationList, data_rot, semantics, numT, numR, maxRho)
-
     return np.ravel(S).astype(np.uint8)
+    
+    # New, modified form of Signature
+    # S = GetSignatureMatrixHisto(azimuthList, elevationList, data_rot, semantics, numT, numR, maxRho, 150)
+    # u,s,vh = np.linalg.svd(S)
+    # desM2DP  = np.concatenate((u[:,0], vh[0,:]))
+    # return desM2DP  
 
 def PCARotationInvariant(data):
     n = data.shape[0]
@@ -124,3 +128,63 @@ def hamming_compare(base_descriptor, other_descriptors):
     dists = (base_descriptor != other_descriptors).sum(1) / other_descriptors.shape[1]
     
     return dists
+
+def GetSignatureMatrixHisto(azimuthList, elevationList, data, semantics, numT, numR, maxRho, numS):
+    S = np.zeros(((len(azimuthList)*len(elevationList)),((numT*numR)+(numS*numR))))
+    n = 0
+
+    thetaList = np.linspace(-np.pi,np.pi,numT+1)
+
+    rhoList = np.linspace(0,np.sqrt(maxRho),numR+1)
+    rhoList = rhoList**2
+    rhoList[-1] = rhoList[-1] + 0.001
+
+    semList = np.arange(0,numS+1)
+
+    for azm in azimuthList:
+        for elv in elevationList:
+            vecN = sph2cart(azm,elv,1)
+
+            h = np.matmul(np.array([1, 0, 0]), vecN.T)
+            c = h*vecN
+
+            px = np.array([1, 0, 0]) - c
+            py = np.cross(vecN, px)
+            pdata = np.transpose(np.array([data@px, data@py]))
+            
+            theta,rho = cart2pol(pdata[:,0], pdata[:,1])
+            space_bin, r_edges, deg_edges = np.histogram2d(rho, theta, bins=(rhoList, thetaList))
+            space_bin = np.ravel(space_bin)
+
+            sem_bins, r_edges, s_edges = np.histogram2d(rho, semantics, bins=(rhoList, semList))
+            sem_bins = np.ravel(sem_bins)
+
+            combo = np.concatenate((space_bin, sem_bins), axis=0)
+
+            S[n, :] = combo
+            n += 1
+    
+    return S
+
+def createSemDescriptorHisto(data, semantics, T=16, L=8, P=4, Q=16):
+    data = np.asarray(data)
+    semantics = np.asarray(semantics)
+
+    numT = T
+    numR = L
+    numP = P
+    numQ = Q
+
+    data_rot = PCARotationInvariant(data)
+
+    azimuthList = np.linspace(-np.pi/2, np.pi, numP)
+    elevationList = np.linspace(0,np.pi/2, numQ)
+
+    rho2 = np.sum(np.power(data_rot, 2), 1)
+    maxRho = np.sqrt(max(rho2))
+
+    # New, modified form of Signature
+    S = GetSignatureMatrixHisto(azimuthList, elevationList, data_rot, semantics, numT, numR, maxRho, 150)
+    u,s,vh = np.linalg.svd(S)
+    desM2DP  = np.concatenate((u[:,0], vh[0,:]))
+    return desM2DP
