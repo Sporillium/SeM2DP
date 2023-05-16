@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance_matrix
 import cv2 as cv
 import argparse
-from multiprocessing.pool import Pool
 from sem2dp import des_decompress_new, hamming_compare
 
 #np.set_printoptions(threshold=10000)
@@ -19,6 +18,7 @@ parser.add_argument('-v', '--use_velodyne', action='store_true', help="Set flag 
 parser.add_argument('-x', '--use_velo_sem', action='store_true', help="Set flag to use Velodyne-Semantic based descriptors") #Use VeloSem true_false
 parser.add_argument('-m', '--use_mod_velo', action='store_true', help="Set flag to use Modified Velodyne based descriptors") # Use Mod Velo true_false
 parser.add_argument('-c', '--use_color', action='store_true', help="Set flag to use c-M2DP descriptors") # Use Color true_false
+parser.add_argument('-d', '--use_mod_sem', action='store_true', help="Set flag to use new SeM2DP descriptors") # Use mod_sem true_false
 
 args = parser.parse_args()
 
@@ -31,6 +31,7 @@ USE_VELO = args.use_velodyne
 USE_MOD_VELO = args.use_mod_velo
 USE_VELO_SEM = args.use_velo_sem
 USE_COLOR = args.use_color
+USE_MOD_SEM = args.use_mod_sem
 
 seq_name = f'{SEQ_NUM:02}'
 
@@ -50,6 +51,7 @@ SEARCH_INTERVAL = 0.005
 des_size = 2048
 des_size_velo = 8192
 des_size_col = 576
+des_size_mod_sem = 1392
 
 matcher = cv.BFMatcher_create(cv.NORM_L2)
 matcher_sem = cv.BFMatcher_create(cv.NORM_HAMMING)
@@ -311,6 +313,22 @@ if USE_COLOR:
     precision_color = []
     recall_color = []
 
+if USE_MOD_SEM:
+    descriptors_mod_sem = np.zeros((seq_len, des_size_mod_sem))
+    with open('descriptor_texts/sem_histo_velo_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+        lines = file.readlines()
+    for i, line in zip(range(len(lines)), lines):
+        try:
+            des = np.fromstring(line.strip('[]\n'), sep=';')
+            descriptors_mod_sem[i, :] = des
+        except:
+            print("Error opening new sem discriptor: ",i)
+            #print(line)
+    print("SEM-HISTO DESCRIPTORS LOADED")
+    descriptors_mod_sem= descriptors_mod_sem.astype(np.float32)
+    precision_mod_sem = []
+    recall_mod_sem = []
+
 cloud_ids = np.arange(seq_len)
 
 # Loop through distance Thresholds:
@@ -340,6 +358,10 @@ for thresh in tqdm(thresholds):
         prec_color, rec_color = evaluate_match(descriptors_color, cloud_ids, distances, des_size_col)
         precision_color.append(prec_color)
         recall_color.append(rec_color)
+    if USE_MOD_SEM:
+        prec_mod_sem, rec_mod_sem = evaluate_match(descriptors_mod_sem, cloud_ids, distances, des_size_mod_sem)
+        precision_mod_sem.append(prec_mod_sem)
+        recall_mod_sem.append(rec_mod_sem)
     
 # Plot the Curve
 print("\n\n")   
@@ -354,7 +376,7 @@ if USE_REG:
     reg_key.set_label("Visual (AP="+f'{average_precision(precision_reg, recall_reg):03}'+")")
     print("Visual Recall @ 100% Precision: "+f'{find_max_rec(precision_reg, recall_reg)}')
 if USE_SEM:
-    sem_key, = ax.plot(recall_sem, precision_sem,  'g-')
+    sem_key, = ax.plot(recall_sem, precision_sem,  'b--')
     sem_key.set_label("Visual-Semantic (AP="+f'{average_precision(precision_sem, recall_sem):03}'+")")
     print("Visual-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_sem, recall_sem)}')
 if USE_VELO:
@@ -366,13 +388,17 @@ if USE_MOD_VELO:
     mod_velo_key.set_label("Modified Velodyne(AP="+f'{average_precision(precision_mod_velo, recall_mod_velo):03}'+")")
     print("Modified Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_mod_velo, recall_mod_velo)}')
 if USE_VELO_SEM:
-    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'y--')
+    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'g-')
     velo_sem_key.set_label("Velodyne-Semantic(AP="+f'{average_precision(precision_velo_sem, recall_velo_sem):03}'+")")
     print("Velodyne-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_velo_sem, recall_velo_sem)}')
 if USE_COLOR:
     color_key, = ax.plot(recall_color, precision_color,  'm-')
     color_key.set_label("Color-Velo(AP="+f'{average_precision(precision_color, recall_color):03}'+")")
     print("Color-Velo Recall @ 100% Precision: "+f'{find_max_rec(precision_color, recall_color)}')
+if USE_MOD_SEM:
+    mod_sem_key, = ax.plot(recall_mod_sem, precision_mod_sem,  'g--')
+    mod_sem_key.set_label("Mod-Sem(AP="+f'{average_precision(precision_mod_sem, recall_mod_sem):03}'+")")
+    print("Mod-Sem Recall @ 100% Precision: "+f'{find_max_rec(precision_mod_sem, recall_mod_sem)}')
 ax.grid()
 ax.legend()
 ax.set_xlim([-0.01, 1.01])
