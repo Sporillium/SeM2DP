@@ -7,7 +7,7 @@ import cloud
 import lidar
 
 from m2dp import createDescriptor, createColorDescriptor
-from sem2dp import createSemDescriptor, des_compress_new
+from sem2dp import createSemDescriptor, des_compress_new, createSemDescriptorHisto
 
 # Python Package imports
 import numpy as np
@@ -45,7 +45,7 @@ seq_name = f'{SEQ_NUM:02}'
 
 #pool = multiprocessing.Pool(6)
 
-if not USE_SEM and not USE_VELO and not USE_COL: # Using Visual Point Clouds
+if not USE_SEM and not USE_VELO and not USE_COL and not USE_MOD: # Using Visual Point Clouds Only
     descriptors = {}
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
@@ -61,7 +61,7 @@ if not USE_SEM and not USE_VELO and not USE_COL: # Using Visual Point Clouds
 
     print(len(descriptors))
 
-if USE_SEM and not USE_VELO: #Using Visual Semantic Point Clouds
+if USE_SEM and not USE_VELO and not USE_COL and not USE_MOD: #Using Visual Semantic Point Clouds
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -87,7 +87,7 @@ if USE_SEM and not USE_VELO: #Using Visual Semantic Point Clouds
     print(len(descriptors))
     print(descriptor_size)
 
-if not USE_SEM and USE_VELO: # Use Velodyne Point Cloud
+if not USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Velodyne Point Cloud
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -104,7 +104,7 @@ if not USE_SEM and USE_VELO: # Use Velodyne Point Cloud
                 line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 file.write(line+"\n")
 
-if USE_SEM and USE_VELO: # Use Semantic Velodyne Point Cloud
+if USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Semantic Velodyne Point Cloud (old way)
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/sem_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -133,7 +133,7 @@ if USE_SEM and USE_VELO: # Use Semantic Velodyne Point Cloud
     print(len(descriptors))
     print(descriptor_size)
 
-if USE_MOD and USE_VELO: # Use Semantic Velodyne Point Cloud
+if USE_MOD and USE_VELO and not USE_SEM and not USE_COL: # Use Constrained Velodyne Point Cloud
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/mod_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -152,7 +152,7 @@ if USE_MOD and USE_VELO: # Use Semantic Velodyne Point Cloud
     
     print(len(descriptors))
 
-if USE_COL and not USE_SEM:
+if USE_COL and USE_VELO and not USE_SEM and not USE_MOD: # Color Only Descriptor
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/color_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -173,3 +173,25 @@ if USE_COL and not USE_SEM:
     
     print(len(descriptors))
 
+if USE_SEM and USE_VELO and USE_MOD and not USE_COL: # Use Semantic Velodyne Point Cloud with different descriptor
+    descriptors = {}
+    if resume is None:
+        with open("descriptor_texts/sem_histo_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud = velo_proc.createCloudSem(im)
+                labels = point_cloud[:,3]
+                point_cloud = point_cloud[:,:3]
+                descriptors[im] = createSemDescriptorHisto(point_cloud, labels)
+                line1 = np.array2string(descriptors[im], max_line_width=50000, separator=';', threshold=10000)
+                file.write(line1+"\n")
+    else:
+        with open("descriptor_texts/sem_histo_velo_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud = velo_proc.createCloudSem(im)
+                labels = point_cloud[:,3]
+                point_cloud = point_cloud[:,:3]
+                descriptors[im] = createSemDescriptorHisto(point_cloud, labels)
+                line1 = np.array2string(descriptors[im], max_line_width=50000, separator=';', threshold=10000)
+                file.write(line1+"\n")
+    print(len(descriptors))
+    #print(descriptor_size)
