@@ -222,21 +222,29 @@ class SegmentationEngine:
 
 # ----- Execution if Main -----
 if __name__ == '__main__':
-    img = cv.imread("Test_Image.png")
-    img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    img_col = cv.imread("Test_Image.png")
+    img_col = cv.cvtColor(img_col, cv.COLOR_BGR2RGB)
+    #img_col = cv.GaussianBlur(img_col, (1,1), 0)
+
+    img_bw = cv.imread("Test_BW.png")
+    img_bw = cv.cvtColor(img_bw, cv.COLOR_BGR2RGB)
+    #img_bw = cv.GaussianBlur(img_bw, (1,1), 0)
 
     segEngine = SegmentationEngine(model_id=2, use_gpu=False)
 
-    output = segEngine.segmentImageVis(img)
-    dist = segEngine.segmentImageDist(img)
-    max = segEngine.segmentImageMax(img)
+    output_col = segEngine.segmentImageVis(img_col)
+    output_bw = segEngine.segmentImageVis(img_bw)
+    #dist = segEngine.segmentImageDist(img_col)
+    #max = segEngine.segmentImageMax(img_col)
 
-    output = cv.cvtColor(output, cv.COLOR_RGB2BGR)
+    output_col = cv.cvtColor(output_col, cv.COLOR_RGB2BGR)
+    output_bw = cv.cvtColor(output_bw, cv.COLOR_RGB2BGR)
 
-    cv.imshow("Segmentation Result", output)
+    cv.imshow("Segmentation Result - Colour", output_col)
+    cv.imshow("Segmentation Result - B&W", output_bw)
     cv.waitKey(0)
     cv.destroyAllWindows()
 
-    print(output.shape, output.dtype)
-    print(dist.shape, dist.dtype)
-    print(max.shape, max.dtype)
+    #print(output.shape, output.dtype)
+    #print(dist.shape, dist.dtype)
+    #print(max.shape, max.dtype)
