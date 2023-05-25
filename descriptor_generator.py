@@ -46,6 +46,7 @@ seq_name = f'{SEQ_NUM:02}'
 #pool = multiprocessing.Pool(6)
 
 if not USE_SEM and not USE_VELO and not USE_COL and not USE_MOD: # Using Visual Point Clouds Only
+    print("CREATING DESCRIPTORS WITH VISUAL POINTS ONLY")
     descriptors = {}
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
@@ -62,6 +63,7 @@ if not USE_SEM and not USE_VELO and not USE_COL and not USE_MOD: # Using Visual 
     print(len(descriptors))
 
 if USE_SEM and not USE_VELO and not USE_COL and not USE_MOD: #Using Visual Semantic Point Clouds
+    print("CREATING DESCRIPTORS WITH VISUAL-SEMANTIC POINTS, ARGMAX METHOD")
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/sem_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -87,7 +89,27 @@ if USE_SEM and not USE_VELO and not USE_COL and not USE_MOD: #Using Visual Seman
     print(len(descriptors))
     print(descriptor_size)
 
+if USE_SEM and not USE_VELO and not USE_COL and USE_MOD: #Using Visual Semantic Point Clouds (Histo Mode)
+    print("CREATING DESCRIPTORS WITH VISUAL-SEMANTIC POINTS, HISTOGRAM METHOD")
+    descriptors = {}
+    if resume is None:
+        with open("descriptor_texts/sem_histo_vis_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud, labels = cloud_engine.processFrame(im)
+                descriptors[im] = createSemDescriptorHisto(point_cloud, labels)
+                line1 = np.array2string(descriptors[im], max_line_width=50000, separator=';', threshold=10000)
+                file.write(line1+"\n")
+    else:
+        with open("descriptor_texts/sem_histo_vis_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud, labels = cloud_engine.processFrame(im)
+                descriptors[im] = createSemDescriptorHisto(point_cloud, labels)
+                line1 = np.array2string(descriptors[im], max_line_width=50000, separator=';', threshold=10000)
+                file.write(line1+"\n")
+    print(len(descriptors))
+
 if not USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Velodyne Point Cloud
+    print("CREATING DESCRIPTORS WITH VELODYNE POINTS")
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -105,6 +127,7 @@ if not USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Velodyne Poin
                 file.write(line+"\n")
 
 if USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Semantic Velodyne Point Cloud (old way)
+    print("CREATING DESCRIPTORS WITH VELODYNE-SEMANTIC POINTS, ARGMAX METHOD")
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/sem_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -134,6 +157,7 @@ if USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Semantic Velodyne
     print(descriptor_size)
 
 if USE_MOD and USE_VELO and not USE_SEM and not USE_COL: # Use Constrained Velodyne Point Cloud
+    print("CREATING DESCRIPTORS WITH VELODYNE POINTS, CONSTRAINED VIEW")
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/mod_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -153,6 +177,7 @@ if USE_MOD and USE_VELO and not USE_SEM and not USE_COL: # Use Constrained Velod
     print(len(descriptors))
 
 if USE_COL and USE_VELO and not USE_SEM and not USE_MOD: # Color Only Descriptor
+    print("CREATING DESCRIPTORS WITH VELODYNE-COLOR POINTS")
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/color_descriptors_kitti_"+seq_name+".txt", 'w') as file:
@@ -174,6 +199,7 @@ if USE_COL and USE_VELO and not USE_SEM and not USE_MOD: # Color Only Descriptor
     print(len(descriptors))
 
 if USE_SEM and USE_VELO and USE_MOD and not USE_COL: # Use Semantic Velodyne Point Cloud with different descriptor
+    print("CREATING DESCRIPTORS WITH VELODYNE-SEMANTIC POINTS, HISTOGRAM METHOD")
     descriptors = {}
     if resume is None:
         with open("descriptor_texts/sem_histo_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
