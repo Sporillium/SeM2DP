@@ -45,5 +45,5 @@ if USE_SEM:
     
 else:
     point_cloud = velo_proc.createCloud(0)
-    pcd.points = o3d.utility.Vector3dVector(point_cloud[:3, :])
+    pcd.points = o3d.utility.Vector3dVector(point_cloud[:, :3])
     o3d.visualization.draw_geometries([pcd])
