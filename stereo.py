@@ -283,16 +283,15 @@ class StereoExtractor:
             imgL = cv.cvtColor(imgL, cv.COLOR_BGR2RGB)
             imgR = cv.cvtColor(imgR, cv.COLOR_BGR2RGB)
 
-            imgL_proc = cv.GaussianBlur(imgL, (5,5), 0)
-            imgR_proc = cv.GaussianBlur(imgR, (5,5), 0)
+            #imgL_proc = cv.GaussianBlur(imgL, (5,5), 0)
+            #imgR_proc = cv.GaussianBlur(imgR, (5,5), 0)
 
             # segment images and get the correct outputs:
-            distL = self.seg_engine.segmentImageDist(imgL_proc)
-            distR = self.seg_engine.segmentImageDist(imgR_proc)
+            distL = self.seg_engine.segmentImageDist(imgL)
+            distR = self.seg_engine.segmentImageDist(imgR)
 
             if show_seg: # Display segmentation results
-                visL = self.seg_engine.segmentImageVis(imgL_proc)
-                visL = cv.cvtColor(visL, cv.COLOR_BGR2RGB)
+                visL = self.seg_engine.segmentImageVis(imgL)
                 cv.imshow("Left Image Segmentation", visL)
                 cv.waitKey(0)
                 cv.destroyAllWindows()
