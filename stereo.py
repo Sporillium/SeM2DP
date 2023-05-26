@@ -255,7 +255,7 @@ class StereoExtractor:
             
             epi_matches = self.epipolarFilter(initial_matches, kpL, kpR, filter_threshold=5.0)
 
-        return epi_matches, kpL, kpR, desL, desR
+        return epi_matches, kpL, kpR, desL, desR, imgL
     
     def semanticsFromImages(self, im_no, show_seg=False):
         """
