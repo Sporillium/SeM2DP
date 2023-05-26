@@ -17,9 +17,10 @@ parser.add_argument('-s', '--use_sem', action='store_true', help="Set flag to us
 parser.add_argument('-v', '--use_velodyne', action='store_true', help="Set flag to use Velodyne-based descriptors") #Use Velo True/False
 parser.add_argument('-x', '--use_velo_sem', action='store_true', help="Set flag to use Velodyne-Semantic based descriptors") #Use VeloSem true_false
 parser.add_argument('-m', '--use_mod_velo', action='store_true', help="Set flag to use Modified Velodyne based descriptors") # Use Mod Velo true_false
-parser.add_argument('-c', '--use_color', action='store_true', help="Set flag to use c-M2DP descriptors") # Use Color true_false
+parser.add_argument('-c', '--use_color_velo', action='store_true', help="Set flag to use c-M2DP descriptors") # Use Color true_false
 parser.add_argument('-d', '--use_mod_sem', action='store_true', help="Set flag to use new SeM2DP descriptors") # Use mod_sem true_false
 parser.add_argument('-f', '--use_mod_sem_vis', action='store_true', help="Set flag to use new Visual SeM2DP descriptors") # use_mod_sem_vis true_false
+parser.add_argument('-g', '--use_color_vis', action='store_true', help="Set flag to use new Visual Color descriptors") # use_col_vis true_false
 
 args = parser.parse_args()
 
@@ -31,9 +32,10 @@ USE_SEM = args.use_sem
 USE_VELO = args.use_velodyne
 USE_MOD_VELO = args.use_mod_velo
 USE_VELO_SEM = args.use_velo_sem
-USE_COLOR = args.use_color
+USE_COLOR_VELO = args.use_color_velo
 USE_MOD_SEM = args.use_mod_sem
 USE_MOD_SEM_VIS = args.use_mod_sem_vis
+USE_COLOR_VIS = args.use_color_vis
 
 seq_name = f'{SEQ_NUM:02}'
 
@@ -299,21 +301,21 @@ if USE_VELO_SEM:
     precision_velo_sem = []
     recall_velo_sem = []
 
-if USE_COLOR:
-    descriptors_color = np.zeros((seq_len, 576))
-    with open('descriptor_texts/color_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+if USE_COLOR_VELO:
+    descriptors_color_velo = np.zeros((seq_len, 576))
+    with open('descriptor_texts/color_velo_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
         lines = file.readlines()
     for i, line in zip(range(len(lines)), lines):
         try:
             des = np.fromstring(line.strip('[]\n'), sep=';')
-            descriptors_color[i, :] = des
+            descriptors_color_velo[i, :] = des
         except:
             print("Error opening color discriptor: ",i)
             #print(line)
     print("COLOR-VELO DESCRIPTORS LOADED")
-    descriptors_color = descriptors_color.astype(np.float32)
-    precision_color = []
-    recall_color = []
+    descriptors_color_velo = descriptors_color_velo.astype(np.float32)
+    precision_color_velo = []
+    recall_color_velo = []
 
 if USE_MOD_SEM:
     descriptors_mod_sem = np.zeros((seq_len, des_size_mod_sem))
@@ -347,6 +349,22 @@ if USE_MOD_SEM_VIS:
     precision_mod_sem_vis = []
     recall_mod_sem_vis = []
 
+if USE_COLOR_VIS:
+    descriptors_color_vis = np.zeros((seq_len, 576))
+    with open('descriptor_texts/color_vis_descriptors_kitti_'+seq_name+'.txt', 'r') as file:
+        lines = file.readlines()
+    for i, line in zip(range(len(lines)), lines):
+        try:
+            des = np.fromstring(line.strip('[]\n'), sep=';')
+            descriptors_color_vis[i, :] = des
+        except:
+            print("Error opening color discriptor: ",i)
+            #print(line)
+    print("COLOR-VIS DESCRIPTORS LOADED")
+    descriptors_color_vis = descriptors_color_vis.astype(np.float32)
+    precision_color_vis = []
+    recall_color_vis = []
+
 cloud_ids = np.arange(seq_len)
 
 # Loop through distance Thresholds:
@@ -372,10 +390,10 @@ for thresh in tqdm(thresholds):
         prec_velo_sem, rec_velo_sem = evaluate_match_sem(descriptors_velo_sem, sem_descriptors_velo_sem, cloud_ids, distances, des_size_velo)
         precision_velo_sem.append(prec_velo_sem)
         recall_velo_sem.append(rec_velo_sem)
-    if USE_COLOR:
-        prec_color, rec_color = evaluate_match(descriptors_color, cloud_ids, distances, des_size_col)
-        precision_color.append(prec_color)
-        recall_color.append(rec_color)
+    if USE_COLOR_VELO:
+        prec_color_velo, rec_color_velo = evaluate_match(descriptors_color_velo, cloud_ids, distances, des_size_col)
+        precision_color_velo.append(prec_color_velo)
+        recall_color_velo.append(rec_color_velo)
     if USE_MOD_SEM:
         prec_mod_sem, rec_mod_sem = evaluate_match(descriptors_mod_sem, cloud_ids, distances, des_size_mod_sem)
         precision_mod_sem.append(prec_mod_sem)
@@ -384,7 +402,10 @@ for thresh in tqdm(thresholds):
         prec_mod_sem_vis, rec_mod_sem_vis = evaluate_match(descriptors_mod_sem_vis, cloud_ids, distances, des_size_mod_sem)
         precision_mod_sem_vis.append(prec_mod_sem_vis)
         recall_mod_sem_vis.append(rec_mod_sem_vis)
-    
+    if USE_COLOR_VIS:
+        prec_color_vis, rec_color_vis = evaluate_match(descriptors_color_vis, cloud_ids, distances, des_size_col)
+        precision_color_vis.append(prec_color_vis)
+        recall_color_vis.append(rec_color_vis)
 # Plot the Curve
 print("\n\n") 
 
@@ -422,9 +443,13 @@ if USE_SEM:
     sem_key.set_label("Visual-Semantic(ArgMax)(AP="+f'{average_precision(precision_sem, recall_sem):.3}'+")")
     print("Visual-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_sem, recall_sem):.3}')
 if USE_MOD_SEM_VIS:
-    mod_sem_vis_key, = ax.plot(recall_mod_sem_vis, precision_mod_sem_vis,  'r--')
+    mod_sem_vis_key, = ax.plot(recall_mod_sem_vis, precision_mod_sem_vis,  'g-')
     mod_sem_vis_key.set_label("Visual-Semantic(Histogram)(AP="+f'{average_precision(precision_mod_sem_vis, recall_mod_sem_vis):.3}'+")")
     print("Mod-Sem_Vis Recall @ 100% Precision: "+f'{find_max_rec(precision_mod_sem_vis, recall_mod_sem_vis):.3}')
+if USE_COLOR_VIS:
+    color_vis_key, = ax.plot(recall_color_vis, precision_color_vis,  'm-')
+    color_vis_key.set_label("Visual-Colour(AP="+f'{average_precision(precision_color_vis, recall_color_vis):.3}'+")")
+    print("Color-Vis Recall @ 100% Precision: "+f'{find_max_rec(precision_color_vis, recall_color_vis):.3}')
 
 if USE_VELO:
     velo_key, = ax.plot(recall_velo, precision_velo,  'y-')
@@ -432,22 +457,21 @@ if USE_VELO:
     print("Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_velo, recall_velo):.3}')
 
 if USE_MOD_VELO:
-    mod_velo_key, = ax.plot(recall_mod_velo, precision_mod_velo,  'y--')
+    mod_velo_key, = ax.plot(recall_mod_velo, precision_mod_velo,  'b--')
     mod_velo_key.set_label("Constrained Velodyne(AP="+f'{average_precision(precision_mod_velo, recall_mod_velo):.3}'+")")
     print("Modified Velodyne Recall @ 100% Precision: "+f'{find_max_rec(precision_mod_velo, recall_mod_velo):.3}')
 if USE_VELO_SEM:
-    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'g-')
+    velo_sem_key, = ax.plot(recall_velo_sem, precision_velo_sem,  'r--')
     velo_sem_key.set_label("Velodyne-Semantic(ArgMax)(AP="+f'{average_precision(precision_velo_sem, recall_velo_sem):.3}'+")")
     print("Velodyne-Semantic Recall @ 100% Precision: "+f'{find_max_rec(precision_velo_sem, recall_velo_sem):.3}')
 if USE_MOD_SEM:
     mod_sem_key, = ax.plot(recall_mod_sem, precision_mod_sem,  'g--')
     mod_sem_key.set_label("Velodyne-Semantic(Histogram)(AP="+f'{average_precision(precision_mod_sem, recall_mod_sem):.3}'+")")
     print("Mod-Sem Recall @ 100% Precision: "+f'{find_max_rec(precision_mod_sem, recall_mod_sem):.3}')
-
-if USE_COLOR:
-    color_key, = ax.plot(recall_color, precision_color,  'm-')
-    color_key.set_label("Velodyne-Colour(AP="+f'{average_precision(precision_color, recall_color):.3}'+")")
-    print("Color-Velo Recall @ 100% Precision: "+f'{find_max_rec(precision_color, recall_color):.3}')
+if USE_COLOR_VELO:
+    color_velo_key, = ax.plot(recall_color_velo, precision_color_velo,  'm--')
+    color_velo_key.set_label("Velodyne-Colour(AP="+f'{average_precision(precision_color_velo, recall_color_velo):.3}'+")")
+    print("Color-Velo Recall @ 100% Precision: "+f'{find_max_rec(precision_color_velo, recall_color_velo):.3}')
 
 
 ax.grid()
