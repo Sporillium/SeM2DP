@@ -73,7 +73,7 @@ class CloudProcessor:
 
         return point_locs, semantics
     
-    def processFrameNoSemantics(self, img):
+    def processFrameNoSemantics(self, img, return_matrix=False):
         """
         Extracts 2D point features and computes 3D Point clouds for a single frame of an input stereo image
 
@@ -85,10 +85,12 @@ class CloudProcessor:
         ----------
             points (list): A list of extracted 3D Semantic points
         """
-        epi_mat, kpL, kpR, desL, desR = self.stereo_extractor.pointsFromImages(img)
+        epi_mat, kpL, kpR, desL, desR, imgL = self.stereo_extractor.pointsFromImages(img)
+
+        point_cloud = np.zeros((len(epi_mat), 7))
 
         points = []
-        for mat in epi_mat:
+        for mat, i in zip(epi_mat, range(len(epi_mat))):
             featL = kpL[mat.queryIdx]
             featR = kpR[mat.trainIdx]
             descL = desL[mat.queryIdx]
@@ -96,12 +98,22 @@ class CloudProcessor:
 
             (xl, yl) = featL.pt
             (xr, yr) = featR.pt
+            
 
             mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
+
+            color_data = imgL[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32), :]
+
             point = MeasuredPoint(mean, cov, sem_dist=None, left_descriptor=descL, right_descriptor=descR)
             points.append(point)
+
+            point_cloud[i, :3] = mean
+            point_cloud[i, 4:] = color_data
         
-        return points
+        if not return_matrix:
+            return points
+        else:
+            return point_cloud
     
     def processPoseChange(self, prev_cloud, curr_cloud):
         """
