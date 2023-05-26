@@ -50,13 +50,13 @@ if not USE_SEM and not USE_VELO and not USE_COL and not USE_MOD: # Using Visual 
     descriptors = {}
     with open("descriptor_texts/basic_descriptors_kitti_"+seq_name+".txt", 'w') as file:
         for im in trange(seq_leng):
-            point_cloud = cloud_engine.processFrameNoSemantics(im)
-            cloud_arr = []
-            for point in point_cloud:
-                loc = point.location
-                cloud_arr.append(loc)
-            cloud_arr = np.asarray(cloud_arr)
-            descriptors[im] = createDescriptor(cloud_arr)
+            point_cloud = cloud_engine.processFrameNoSemantics(im, return_matrix=True)
+            # cloud_arr = []
+            # for point in point_cloud:
+            #     loc = point.location
+            #     cloud_arr.append(loc)
+            # cloud_arr = np.asarray(cloud_arr)
+            descriptors[im] = createDescriptor(point_cloud[:,:3])
             line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
             file.write(line+"\n")
 
@@ -108,6 +108,7 @@ if USE_SEM and not USE_VELO and not USE_COL and USE_MOD: #Using Visual Semantic 
                 file.write(line1+"\n")
     print(len(descriptors))
 
+
 if not USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Velodyne Point Cloud
     print("CREATING DESCRIPTORS WITH VELODYNE POINTS")
     descriptors = {}
@@ -125,6 +126,27 @@ if not USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Velodyne Poin
                 descriptors[im] = createDescriptor(point_cloud)
                 line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
                 file.write(line+"\n")
+
+
+if USE_MOD and USE_VELO and not USE_SEM and not USE_COL: # Use Constrained Velodyne Point Cloud
+    print("CREATING DESCRIPTORS WITH VELODYNE POINTS, CONSTRAINED VIEW")
+    descriptors = {}
+    if resume is None:
+        with open("descriptor_texts/mod_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud = velo_proc.createCloudMod(im)
+                descriptors[im] = createDescriptor(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                file.write(line+"\n")
+    else:
+        with open("descriptor_texts/mod_velo_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud = velo_proc.createCloudMod(im)
+                descriptors[im] = createDescriptor(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
+                file.write(line+"\n")
+    
+    print(len(descriptors))
 
 if USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Semantic Velodyne Point Cloud (old way)
     print("CREATING DESCRIPTORS WITH VELODYNE-SEMANTIC POINTS, ARGMAX METHOD")
@@ -156,48 +178,6 @@ if USE_SEM and USE_VELO and not USE_MOD and not USE_COL: # Use Semantic Velodyne
     print(len(descriptors))
     print(descriptor_size)
 
-if USE_MOD and USE_VELO and not USE_SEM and not USE_COL: # Use Constrained Velodyne Point Cloud
-    print("CREATING DESCRIPTORS WITH VELODYNE POINTS, CONSTRAINED VIEW")
-    descriptors = {}
-    if resume is None:
-        with open("descriptor_texts/mod_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
-            for im in trange(seq_leng):
-                point_cloud = velo_proc.createCloudMod(im)
-                descriptors[im] = createDescriptor(point_cloud)
-                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
-                file.write(line+"\n")
-    else:
-        with open("descriptor_texts/mod_velo_descriptors_kitti_"+seq_name+".txt", 'a') as file:
-            for im in trange(resume, seq_leng):
-                point_cloud = velo_proc.createCloudMod(im)
-                descriptors[im] = createDescriptor(point_cloud)
-                line = np.array2string(descriptors[im], max_line_width=10000, separator=';')
-                file.write(line+"\n")
-    
-    print(len(descriptors))
-
-if USE_COL and USE_VELO and not USE_SEM and not USE_MOD: # Color Only Descriptor
-    print("CREATING DESCRIPTORS WITH VELODYNE-COLOR POINTS")
-    descriptors = {}
-    if resume is None:
-        with open("descriptor_texts/color_descriptors_kitti_"+seq_name+".txt", 'w') as file:
-            for im in trange(seq_leng):
-                point_cloud = velo_proc.createCloudFull(im)
-                point_cloud = np.delete(point_cloud, 3, 1)
-                descriptors[im] = createColorDescriptor(point_cloud)
-                line = np.array2string(descriptors[im], max_line_width=50000, separator=';')
-                file.write(line+"\n")
-    else:
-        with open("descriptor_texts/color_descriptors_kitti_"+seq_name+".txt", 'a') as file:
-            for im in trange(resume, seq_leng):
-                point_cloud = velo_proc.createCloudFull(im)
-                point_cloud = np.delete(point_cloud, 3, 1)
-                descriptors[im] = createColorDescriptor(point_cloud)
-                line = np.array2string(descriptors[im], max_line_width=50000, separator=';')
-                file.write(line+"\n")
-    
-    print(len(descriptors))
-
 if USE_SEM and USE_VELO and USE_MOD and not USE_COL: # Use Semantic Velodyne Point Cloud with different descriptor
     print("CREATING DESCRIPTORS WITH VELODYNE-SEMANTIC POINTS, HISTOGRAM METHOD")
     descriptors = {}
@@ -221,3 +201,48 @@ if USE_SEM and USE_VELO and USE_MOD and not USE_COL: # Use Semantic Velodyne Poi
                 file.write(line1+"\n")
     print(len(descriptors))
     #print(descriptor_size)
+
+
+if USE_COL and USE_VELO and not USE_SEM and not USE_MOD: # Color Velodyne Only Descriptor
+    print("CREATING DESCRIPTORS WITH VELODYNE-COLOR POINTS")
+    descriptors = {}
+    if resume is None:
+        with open("descriptor_texts/color_velo_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud = velo_proc.createCloudFull(im)
+                point_cloud = np.delete(point_cloud, 3, 1)
+                descriptors[im] = createColorDescriptor(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=50000, separator=';')
+                file.write(line+"\n")
+    else:
+        with open("descriptor_texts/color_velo_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud = velo_proc.createCloudFull(im)
+                point_cloud = np.delete(point_cloud, 3, 1)
+                descriptors[im] = createColorDescriptor(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=50000, separator=';')
+                file.write(line+"\n")
+    
+    print(len(descriptors))
+
+if USE_COL and not USE_VELO and not USE_SEM and not USE_MOD:
+    print("CREATING DESCRIPTORS WITH VISUAL-COLOR POINTS")
+    descriptors = {}
+    if resume is None:
+        with open("descriptor_texts/color_vis_descriptors_kitti_"+seq_name+".txt", 'w') as file:
+            for im in trange(seq_leng):
+                point_cloud = cloud_engine.processFrameNoSemantics(im, return_matrix=True)
+                point_cloud = np.delete(point_cloud, 3, 1)
+                descriptors[im] = createColorDescriptor(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=50000, separator=';')
+                file.write(line+"\n")
+    else:
+        with open("descriptor_texts/color_vis_descriptors_kitti_"+seq_name+".txt", 'a') as file:
+            for im in trange(resume, seq_leng):
+                point_cloud = cloud_engine.processFrameNoSemantics(im, return_matrix=True)
+                point_cloud = np.delete(point_cloud, 3, 1)
+                descriptors[im] = createColorDescriptor(point_cloud)
+                line = np.array2string(descriptors[im], max_line_width=50000, separator=';')
+                file.write(line+"\n")
+    
+    print(len(descriptors))
