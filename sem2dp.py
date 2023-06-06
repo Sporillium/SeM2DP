@@ -188,3 +188,71 @@ def createSemDescriptorHisto(data, semantics, T=16, L=8, P=4, Q=16):
     u,s,vh = np.linalg.svd(S)
     desM2DP  = np.concatenate((u[:,0], vh[0,:]))
     return desM2DP
+
+def GetSignatureMatrixHisto_Tune(azimuthList, elevationList, data, semantics, numT, numR, numC, numB, maxRho, numS,):
+    S = np.zeros(((len(azimuthList)*len(elevationList)),((numT*numR)+(numS*numC*numB))))
+    n = 0
+
+    thetaList = np.linspace(-np.pi,np.pi,numT+1)
+    binList = np.linspace(-np.pi,np.pi,numC+1)
+
+    rhoList = np.linspace(0,np.sqrt(maxRho),numR+1)
+    rhoList = rhoList**2
+    rhoList[-1] = rhoList[-1] + 0.001
+
+    circList = np.linspace(0,np.sqrt(maxRho),numC+1)
+    circList = circList**2
+    circList[-1] = circList[-1] + 0.001
+
+    semList = np.arange(0,numS+1)
+
+    for azm in azimuthList:
+        for elv in elevationList:
+            vecN = sph2cart(azm,elv,1)
+
+            h = np.matmul(np.array([1, 0, 0]), vecN.T)
+            c = h*vecN
+
+            px = np.array([1, 0, 0]) - c
+            py = np.cross(vecN, px)
+            pdata = np.transpose(np.array([data@px, data@py]))
+            
+            theta,rho = cart2pol(pdata[:,0], pdata[:,1])
+            space_bin, r_edges, deg_edges = np.histogram2d(rho, theta, bins=(rhoList, thetaList))
+            space_bin = np.ravel(space_bin)
+
+            input_array = np.vstack((rho, theta, semantics))
+            sem_bins, edges = np.histogramdd(input_array.T, bins=(circList, binList, semList))
+            sem_bins = np.ravel(sem_bins)
+
+            combo = np.concatenate((space_bin, sem_bins), axis=0)
+
+            S[n, :] = combo
+            n += 1
+    
+    return S
+
+def createSemDescriptorHisto_Tune(data, semantics, T=16, L=8, P=4, Q=16, C=8, B=1):
+    data = np.asarray(data)
+    semantics = np.asarray(semantics)
+
+    numT = T
+    numR = L
+    numP = P
+    numQ = Q
+    numC = C
+    numB = B
+
+    data_rot = PCARotationInvariant(data)
+
+    azimuthList = np.linspace(-np.pi/2, np.pi, numP)
+    elevationList = np.linspace(0,np.pi/2, numQ)
+
+    rho2 = np.sum(np.power(data_rot, 2), 1)
+    maxRho = np.sqrt(max(rho2))
+
+    # New, modified form of Signature
+    S = GetSignatureMatrixHisto_Tune(azimuthList, elevationList, data_rot, semantics, numT, numR, numC, numB, maxRho, 150)
+    u,s,vh = np.linalg.svd(S)
+    desM2DP  = np.concatenate((u[:,0], vh[0,:]))
+    return desM2DP
