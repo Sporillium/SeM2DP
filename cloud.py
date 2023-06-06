@@ -34,7 +34,7 @@ class CloudProcessor:
             points (list): A list of extracted 3D Semantic points
         """
         distL, distR = self.stereo_extractor.semanticsFromImages(img)
-        epi_mat, kpL, kpR, desL, desR = self.stereo_extractor.pointsFromImages(img)
+        epi_mat, kpL, kpR, desL, desR, imgL = self.stereo_extractor.pointsFromImages(img)
 
         #print(type(distL))
         #print(distL.shape)
