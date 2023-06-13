@@ -18,8 +18,11 @@ FIXED_BLUR = np.array([ [0.0023997,  0.00590231, 0.01012841, 0.0121259,  0.01012
 
 DYNAMIC_CLASSES = [12, 20, 76, 80, 83, 90, 102, 103, 116, 127] # Dynamic Object Classes
                     #[Person, Car, Boat, Bus, Truck, Airplane, Van, Ship, Motorbike, Bicycle]
+DYNAMIC_CLASSES_SUPER = [8, 9]
+                    #[Creatures, Vehicles]
 UNCLEAR_CLASSES = [2] # Classes that present non-fixed values
                     #[Sky]
+UNCLEAR_CLASSES_SUPER = UNCLEAR_CLASSES
 #np.seterr(all='raise')
 # ----- Class Definitions -----
 class StereoExtractor:
@@ -479,18 +482,28 @@ class StereoExtractor:
                 filtered_points.append(point)
         return filtered_points
 
-    def excludeDynamicLabelsMatrix(self, points):
+    def excludeDynamicLabelsMatrix(self, points, isSuper=False):
         filtered_points = []
-        for i in range(points.shape[0]):
-            if points[i, 3] not in DYNAMIC_CLASSES:
-                filtered_points.append(points[i, :])
+        if not isSuper:
+            for i in range(points.shape[0]):
+                if points[i, 3] not in DYNAMIC_CLASSES:
+                    filtered_points.append(points[i, :])
+        else:
+            for i in range(points.shape[0]):
+                if points[i, 3] not in DYNAMIC_CLASSES_SUPER:
+                    filtered_points.append(points[i, :])
         return np.asarray(filtered_points)
 
-    def excludeUncertainLabelsMatrix(self, points):
+    def excludeUncertainLabelsMatrix(self, points, isSuper=False):
         filtered_points = []
-        for i in range(points.shape[0]):
-            if points[i, 3] not in UNCLEAR_CLASSES:
-                filtered_points.append(points[i, :])
+        if not isSuper:
+            for i in range(points.shape[0]):
+                if points[i, 3] not in UNCLEAR_CLASSES:
+                    filtered_points.append(points[i, :])
+        else:
+            for i in range(points.shape[0]):
+                if points[i, 3] not in UNCLEAR_CLASSES_SUPER:
+                    filtered_points.append(points[i, :])
         return np.asarray(filtered_points)
                 
 # ----- Function Definitions -----
