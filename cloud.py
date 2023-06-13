@@ -73,6 +73,44 @@ class CloudProcessor:
 
         return point_locs, semantics
     
+    def processFrameFast(self, img, filter_unclear_classes=True, filter_dynamic_classes=False):
+        labels_L, img_SL = self.stereo_extractor.semanticsMaxFromImages(img)
+        epi_mat, kpL, kpR, desL, desR, imgL = self.stereo_extractor.pointsFromImages(img)
+
+        point_cloud = np.zeros((len(epi_mat), 7))
+
+        points = []
+        for mat, i in zip(epi_mat, range(len(epi_mat))):
+            featL = kpL[mat.queryIdx]
+            featR = kpR[mat.trainIdx]
+            descL = desL[mat.queryIdx]
+            descR = desR[mat.trainIdx]
+
+            (xl, yl) = featL.pt
+            (xr, yr) = featR.pt
+            
+
+            mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
+
+            label_data = labels_L[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32)]
+            color_data = imgL[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32), :]
+
+            point = MeasuredPoint(mean, cov, sem_dist=None, left_descriptor=descL, right_descriptor=descR)
+            points.append(point)
+
+            point_cloud[i, :3] = mean
+            point_cloud[i, 3] = label_data
+            point_cloud[i, 4:] = color_data
+
+         #print("Total points before filtering: ", len(points))
+        if filter_unclear_classes:
+            point_cloud = self.stereo_extractor.excludeUncertainLabelsMatrix(point_cloud)
+        
+        if filter_dynamic_classes:
+            point_cloud = self.stereo_extractor.excludeDynamicLabelsMatrix(point_cloud)
+        
+        return point_cloud
+
     def processFrameNoSemantics(self, img, return_matrix=False):
         """
         Extracts 2D point features and computes 3D Point clouds for a single frame of an input stereo image
@@ -109,6 +147,8 @@ class CloudProcessor:
 
             point_cloud[i, :3] = mean
             point_cloud[i, 4:] = color_data
+        
+        
         
         if not return_matrix:
             return points
