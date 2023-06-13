@@ -60,3 +60,15 @@ creatures_class = [12, 126]
 vehicles_class = [20, 76, 80, 83, 90, 102, 103, 116, 127]
 '''Car, Boat, Bus, Truck, Airplane, Van, Ship, Minibike, Bicycle '''
 # Total Weight in Dataset: 0.0152 (1.52%)
+
+superclasses = {-1:void_class,
+           0: structures_class,
+           1: flat_surface_class,
+           2: furniture_class,
+           3: sky_class,
+           4: environment_class,
+           5: natural_object_class,
+           6: interior_object_class,
+           7: exterior_object_class,
+           8: creatures_class,
+           9: vehicles_class}
