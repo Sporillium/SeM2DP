@@ -1,29 +1,30 @@
 # Script for auto tuning of parameters (Optimising mAP)
 
 import numpy as np
-from tqdm import tqdm
-import matplotlib.pyplot as plt
 from scipy.spatial import distance_matrix
 import cv2 as cv
 import argparse
-from tqdm import trange
+from tqdm import trange, tqdm
+import itertools as iter
 
 # Custom File Imports:
 import segmentation as seg
 import stereo
 import cloud
-import lidar
 from sem2dp import createSemDescriptorHisto_Tune
 
 # Function Definitions
 def generate_decriptor_array(circs, bins, cloud_engine, seq_leng):
-    print("EVAL @ L="+str(circs)+", T="+str(bins))
+    label = "DESC @ L="+str(circs)+", T="+str(bins)
+    #print(label)
     des_size = ((4*16)+((16*8)+(150*circs*bins)))
-
     descriptors = np.zeros((seq_leng,des_size))
-    for im in trange(seq_leng):
-        point_cloud, labels = cloud_engine.processFrame(im)
-        descriptors[im,:] = createSemDescriptorHisto_Tune(point_cloud, labels, C=circs, B=bins)
+    for im in tqdm(range(seq_leng), desc=label):
+        point_cloud = cloud_engine.processFrameFast(im)
+        labels = point_cloud[:, 3]
+        points = point_cloud[:, :3]
+        descriptors[im,:] = createSemDescriptorHisto_Tune(points, labels, C=circs, B=bins)
+    descriptors = descriptors.astype(np.float32)
     return descriptors, des_size
 
 def average_precision(prec, rec):
@@ -32,7 +33,7 @@ def average_precision(prec, rec):
         av_prec += (rec[i+1]-rec[i])*prec[i+1]
     return av_prec
 
-def evaluate_matches(input_descriptors, cloud_ids, distances, des_size):
+def evaluate_matches(input_descriptors, cloud_ids, distances, des_size, label):
     matcher = cv.BFMatcher_create(cv.NORM_L2)
     match_boundary = 50 # Number of frames before/after matching can occur
     gt_threshold = 10.0
@@ -41,7 +42,7 @@ def evaluate_matches(input_descriptors, cloud_ids, distances, des_size):
     precision = []
     recall = []
 
-    for thresh in thresholds:
+    for thresh in tqdm(thresholds, desc='MATCH '+label):
         # Define values:
         tp = 0
         tn = 0
@@ -91,6 +92,55 @@ def evaluate_matches(input_descriptors, cloud_ids, distances, des_size):
     
     return mAP
 
+def eval_Params(params):
+    (circs, bins) = params
+    label = "@ L="+str(circs)+", T="+str(bins)
+    descriptors, des_len = generate_decriptor_array(circs, bins, cloud_engine, seq_leng)
+    cloud_ids = np.arange(seq_leng)
+    mAP = evaluate_matches(descriptors, cloud_ids, distances, des_len, label)
+    print("mAP: {}".format(mAP))
+    print("Descriptor Length: {}".format(des_len))
+    print("-------------------------------------")
+    return mAP
+
+def bilinear(circs, bins, vals):
+    mid_circ = (circs[1] + circs[0])/2
+    mid_bin = (bins[1] + bins[0])/2
+
+    weight = 1/((circs[1] - circs[0])*(bins[1] - bins[0]))
+
+    circ_lerp = np.array([circs[1]-mid_circ, mid_circ-circs[0]])
+    bin_lerp = np.array([[bins[1]-mid_bin],[mid_bin-bins[0]]])
+    val_lerp = np.array([[vals[0], vals[1]],[vals[2], vals[3]]])
+
+    return weight*(circ_lerp@val_lerp@bin_lerp)
+
+def recursive_search(c_min, c_max, b_min, b_max, search_space):
+    c_mid = int(np.floor((c_min + c_max)/2))
+    b_mid = int(np.floor((b_min + b_max)/2))
+
+
+    # Check if new division is too small
+    if c_mid == c_min or b_mid == b_min:
+        return None
+
+    # Define Search Parameters
+    c_search = [c_min, c_mid, c_max]
+    b_search = [b_min, b_mid, b_max]
+    search_iteration = iter.product(c_search, b_search)
+
+    # Perform Function Evals
+    for pair in search_iteration:
+        if search_space[pair] == 0:
+            search_space[pair] = eval_Params(pair)
+        else:
+            continue
+    
+    print(search_space)
+    return None
+    
+
+
 if __name__ == '__main__':
     # Argument Parser Options:
     parser = argparse.ArgumentParser(description="Perform Parameter Tuning on SeM2DP Models")
@@ -123,7 +173,7 @@ if __name__ == '__main__':
         exit()
 
     # Create all of the model required systems:
-    segmentation_engine = seg.SegmentationEngine(model_id=6, use_gpu=False)
+    segmentation_engine = seg.SegmentationEngine(model_id=6, use_gpu=True)
     stereo_extractor = stereo.StereoExtractor(segmentation_engine, detector='SIFT', matcher='BF', camera_id=0, seq=seq)
     cloud_engine = cloud.CloudProcessor(stereo_extractor)
     seq_leng = stereo_extractor.seq_len
@@ -147,14 +197,17 @@ if __name__ == '__main__':
 
     num_eval = len(circles) * len(bins)
 
+    search_space = np.zeros((len(circles)+1, len(bins)+1))
+
     if num_eval > 9:
         print("Using Dynamic Search")
         print(num_eval)
     
-    print("Quick Test")
+    # print("Quick Test")
+    # input_circs = [1,1,1,1]
+    # input_bins = [1,2,3,4]
 
-    descriptors, des_len = generate_decriptor_array(1, 1, cloud_engine, seq_leng)
-    print(des_len)
-    cloud_ids = np.arange(seq_leng)
-    mAP = evaluate_matches(descriptors, cloud_ids, distances, des_len)
-    print(mAP)
+    # for pair in zip(input_circs, input_bins):
+    #     search_space[pair] = eval_Params(pair)
+
+    recursive_search(circles[0], circles[-1], bins[0], bins[-1], search_space)
