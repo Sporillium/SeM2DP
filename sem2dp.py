@@ -194,7 +194,7 @@ def GetSignatureMatrixHisto_Tune(azimuthList, elevationList, data, semantics, nu
     n = 0
 
     thetaList = np.linspace(-np.pi,np.pi,numT+1)
-    binList = np.linspace(-np.pi,np.pi,numC+1)
+    binList = np.linspace(-np.pi,np.pi,numB+1)
 
     rhoList = np.linspace(0,np.sqrt(maxRho),numR+1)
     rhoList = rhoList**2
