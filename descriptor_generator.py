@@ -225,7 +225,7 @@ if USE_COL and USE_VELO and not USE_SEM and not USE_MOD: # Color Velodyne Only D
     
     print(len(descriptors))
 
-if USE_COL and not USE_VELO and not USE_SEM and not USE_MOD:
+if USE_COL and not USE_VELO and not USE_SEM and not USE_MOD: #Color Visual Descriptor
     print("CREATING DESCRIPTORS WITH VISUAL-COLOR POINTS")
     descriptors = {}
     if resume is None:
