@@ -14,16 +14,24 @@ import cloud
 from sem2dp import createSemDescriptorHisto_Tune
 
 # Function Definitions
-def generate_decriptor_array(circs, bins, cloud_engine, seq_leng):
+def generate_decriptor_array(circs, bins, cloud_engine, seq_leng, model):
     label = "DESC @ L="+str(circs)+", T="+str(bins)
-    #print(label)
-    des_size = ((4*16)+((16*8)+(150*circs*bins)))
+    if model == 'normal':
+        classes = 150
+    elif model == 'super':
+        classes = 10
+    des_size = ((4*16)+((16*8)+(classes*circs*bins)))
     descriptors = np.zeros((seq_leng,des_size))
     for im in tqdm(range(seq_leng), desc=label):
-        point_cloud = cloud_engine.processFrameFast(im)
+        if model == 'normal':
+            point_cloud = cloud_engine.processFrameFast(im)
+            classes = 150
+        elif model == 'super':
+            point_cloud = cloud_engine.processFrameSuperSemantics(im)
+            classes = 10
         labels = point_cloud[:, 3]
         points = point_cloud[:, :3]
-        descriptors[im,:] = createSemDescriptorHisto_Tune(points, labels, C=circs, B=bins)
+        descriptors[im,:] = createSemDescriptorHisto_Tune(points, labels, C=circs, B=bins, S=classes)
     descriptors = descriptors.astype(np.float32)
     return descriptors, des_size
 
@@ -92,10 +100,10 @@ def evaluate_matches(input_descriptors, cloud_ids, distances, des_size, label):
     
     return mAP
 
-def eval_Params(params):
+def eval_Params(params, model):
     (circs, bins) = params
     label = "@ L="+str(circs)+", T="+str(bins)
-    descriptors, des_len = generate_decriptor_array(circs, bins, cloud_engine, seq_leng)
+    descriptors, des_len = generate_decriptor_array(circs, bins, cloud_engine, seq_leng, model)
     cloud_ids = np.arange(seq_leng)
     mAP = evaluate_matches(descriptors, cloud_ids, distances, des_len, label)
     print("mAP: {}".format(mAP))
@@ -115,7 +123,7 @@ def bilinear(circs, bins, vals):
 
     return weight*(circ_lerp@val_lerp@bin_lerp)
 
-def recursive_search(c_min, c_max, b_min, b_max, search_space):
+def recursive_search(c_min, c_max, b_min, b_max, search_space, model):
     c_mid = int(np.floor((c_min + c_max)/2))
     b_mid = int(np.floor((b_min + b_max)/2))
 
@@ -132,7 +140,7 @@ def recursive_search(c_min, c_max, b_min, b_max, search_space):
     # Perform Function Evals
     for pair in search_iteration:
         if search_space[pair] == 0:
-            search_space[pair] = eval_Params(pair)
+            search_space[pair] = eval_Params(pair, model)
         else:
             continue
     
@@ -150,6 +158,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--sequence', required=True, type=int, help="Specify the KITTI sequence to use for tuning")
     # Other Parameters
     parser.add_argument('-m', '--model', default='normal', type=str, help="Specify the model type, either 'normal', 'super', or 'hamming'")
+    parser.add_argument('-e', '--ex_type', default='search', type=str, help="Specify the execution type, either 'search', or 'single'")
 
     # Parser arguments and check for inconsistencies
     args = parser.parse_args()
@@ -158,9 +167,13 @@ if __name__ == '__main__':
     max_bins = args.bins
     seq = args.sequence
     mod_type = args.model
+    ex_type = args.ex_type
 
     if mod_type not in ['normal', 'super', 'hamming']:
         print("Undefined Model Type Specified, please choose either: \n\n\tnormal \n\tsuper \n\thamming")
+        exit()
+    if ex_type not in ['search', 'single']:
+        print("Undefined Execution type specified, please choose either 'search' or 'single'")
         exit()
     if seq not in range(11):
         print("Chosen sequence has no ground truth available, please choose from Kitti Sequences 00 thru 10")
@@ -179,7 +192,7 @@ if __name__ == '__main__':
     seq_leng = stereo_extractor.seq_len
     seq_name = f'{seq:02}'
 
-    print("\n\nPARAMETER SUMMARY:\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tCIRCLE RANGE:\t1-"+str(max_circles)+"\n\tBIN RANGE:\t1-"+str(max_bins))
+   
 
     # Load GT data
     poses = np.loadtxt('/home/march/devel/datasets/Kitti/odometry-2012/poses/'+seq_name+'.txt')
@@ -192,22 +205,21 @@ if __name__ == '__main__':
     distances = distance_matrix(locations, locations)
 
     # Check the number of parameter combinations:
-    circles = np.arange(1, max_circles+1)
-    bins = np.arange(1, max_bins+1)
+    if ex_type == 'search':
+        print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tCIRCLE RANGE:\t1-"+str(max_circles)+"\n\tBIN RANGE:\t1-"+str(max_bins))
+        circles = np.arange(1, max_circles+1)
+        bins = np.arange(1, max_bins+1)
 
-    num_eval = len(circles) * len(bins)
+        num_eval = len(circles) * len(bins)
 
-    search_space = np.zeros((len(circles)+1, len(bins)+1))
+        search_space = np.zeros((len(circles)+1, len(bins)+1))
 
-    if num_eval > 9:
-        print("Using Dynamic Search")
-        print(num_eval)
+        # if num_eval > 9:
+        #     print("Using Dynamic Search")
+        #     print(num_eval)
+        
+        recursive_search(circles[0], circles[-1], bins[0], bins[-1], search_space, mod_type)
     
-    # print("Quick Test")
-    # input_circs = [1,1,1,1]
-    # input_bins = [1,2,3,4]
-
-    # for pair in zip(input_circs, input_bins):
-    #     search_space[pair] = eval_Params(pair)
-
-    recursive_search(circles[0], circles[-1], bins[0], bins[-1], search_space)
+    elif ex_type == 'single':
+        print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tCIRCLE VAL:\t"+str(max_circles)+"\n\tBIN VAL:\t"+str(max_bins))
+        eval_Params((max_circles,max_bins), mod_type)
