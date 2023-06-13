@@ -3,6 +3,7 @@
 # Package Imports
 import numpy as np
 import random
+from superclasses import superclasses
 
 # Constants
 SCALE_THRESHOLD = 0.99
@@ -108,6 +109,39 @@ class CloudProcessor:
         
         if filter_dynamic_classes:
             point_cloud = self.stereo_extractor.excludeDynamicLabelsMatrix(point_cloud)
+        
+        return point_cloud
+    
+    def processFrameSuperSemantics(self, img, filter_unclear_classes=True, filter_dynamic_classes=False):
+        labels_L, img_SL = self.stereo_extractor.semanticsMaxFromImages(img)
+        epi_mat, kpL, kpR, desL, desR, imgL = self.stereo_extractor.pointsFromImages(img)
+
+        point_cloud = np.zeros((len(epi_mat), 7))
+
+        for mat, i in zip(epi_mat, range(len(epi_mat))):
+            featL = kpL[mat.queryIdx]
+            featR = kpR[mat.trainIdx]
+
+            (xl, yl) = featL.pt
+            (xr, yr) = featR.pt
+            
+
+            mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
+
+            label_data = labels_L[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32)]
+            color_data = imgL[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32), :]
+
+            point_cloud[i, :3] = mean
+            point_cloud[i, 3] = label_data
+            point_cloud[i, 4:] = color_data
+
+        convert_to_super(point_cloud, superclasses)
+
+        if filter_unclear_classes:
+            point_cloud = self.stereo_extractor.excludeUncertainLabelsMatrix(point_cloud, isSuper=True)
+        
+        if filter_dynamic_classes:
+            point_cloud = self.stereo_extractor.excludeDynamicLabelsMatrix(point_cloud, isSuper=True)
         
         return point_cloud
 
@@ -549,3 +583,9 @@ def prob_func_chiu_log(x, C, y, P):
     meas = (diff.T @ cov_inv @ diff) + np.log(cov_det)
 
     return meas
+
+def convert_to_super(points, superclasses):
+    for i in range(points.shape[0]):
+        for (k,v) in superclasses.items():
+            if points[i, 3] in v:
+                points[i,3] = k
