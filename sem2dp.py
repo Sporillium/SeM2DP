@@ -166,7 +166,7 @@ def GetSignatureMatrixHisto(azimuthList, elevationList, data, semantics, numT, n
     
     return S
 
-def createSemDescriptorHisto(data, semantics, T=16, L=8, P=4, Q=16):
+def createSemDescriptorHisto(data, semantics, T=16, L=8, P=4, Q=16, S=150):
     data = np.asarray(data)
     semantics = np.asarray(semantics)
 
@@ -174,6 +174,7 @@ def createSemDescriptorHisto(data, semantics, T=16, L=8, P=4, Q=16):
     numR = L
     numP = P
     numQ = Q
+    numS = S
 
     data_rot = PCARotationInvariant(data)
 
@@ -184,12 +185,12 @@ def createSemDescriptorHisto(data, semantics, T=16, L=8, P=4, Q=16):
     maxRho = np.sqrt(max(rho2))
 
     # New, modified form of Signature
-    S = GetSignatureMatrixHisto(azimuthList, elevationList, data_rot, semantics, numT, numR, maxRho, 150)
+    S = GetSignatureMatrixHisto(azimuthList, elevationList, data_rot, semantics, numT, numR, maxRho, numS)
     u,s,vh = np.linalg.svd(S)
     desM2DP  = np.concatenate((u[:,0], vh[0,:]))
     return desM2DP
 
-def GetSignatureMatrixHisto_Tune(azimuthList, elevationList, data, semantics, numT, numR, numC, numB, maxRho, numS,):
+def GetSignatureMatrixHisto_Tune(azimuthList, elevationList, data, semantics, numT, numR, numC, numB, maxRho, numS):
     S = np.zeros(((len(azimuthList)*len(elevationList)),((numT*numR)+(numS*numC*numB))))
     n = 0
 
@@ -232,7 +233,7 @@ def GetSignatureMatrixHisto_Tune(azimuthList, elevationList, data, semantics, nu
     
     return S
 
-def createSemDescriptorHisto_Tune(data, semantics, T=16, L=8, P=4, Q=16, C=8, B=1):
+def createSemDescriptorHisto_Tune(data, semantics, T=16, L=8, P=4, Q=16, C=8, B=1, S=150):
     data = np.asarray(data)
     semantics = np.asarray(semantics)
 
@@ -242,6 +243,7 @@ def createSemDescriptorHisto_Tune(data, semantics, T=16, L=8, P=4, Q=16, C=8, B=
     numQ = Q
     numC = C
     numB = B
+    numS = S
 
     data_rot = PCARotationInvariant(data)
 
@@ -252,7 +254,7 @@ def createSemDescriptorHisto_Tune(data, semantics, T=16, L=8, P=4, Q=16, C=8, B=
     maxRho = np.sqrt(max(rho2))
 
     # New, modified form of Signature
-    S = GetSignatureMatrixHisto_Tune(azimuthList, elevationList, data_rot, semantics, numT, numR, numC, numB, maxRho, 150)
+    S = GetSignatureMatrixHisto_Tune(azimuthList, elevationList, data_rot, semantics, numT, numR, numC, numB, maxRho, numS)
     u,s,vh = np.linalg.svd(S)
     desM2DP  = np.concatenate((u[:,0], vh[0,:]))
     return desM2DP
