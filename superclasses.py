@@ -20,7 +20,7 @@ flat_surface_class = [3, 5, 6, 11, 52, 54, 91, 94]
 furniture_class = [7, 10, 15, 19, 23, 24, 30, 31, 33, 35, 37, 44, 45, 47, 49, 50, 56, 62, 64, 65, 70, 71, 73, 75, 78, 88, 97, 99, 107, 110, 117, 118, 129, 133, 145, 146]
 '''Bed, Cabinent, Table, Chair, Sofa, Shelf, Armchair, Seat, Desk, Wardrobe, Bathtub, Chest of Drawers, Counter, Sink, Fireplace, Refrigerator,
     Pool Table, Bookcase, Coffee Table, Toilet, Countertop, Stove, Kitchen Island, Swivel Chair, Arcade Machine, Booth, Ottoman, Buffet Counter,
-    Wacher, Stool, Cradle, Oven, Dishwasher, Exhaust Hood, Shower, Radiator'''
+    Washer, Stool, Cradle, Oven, Dishwasher, Exhaust Hood, Shower, Radiator'''
 # Total Weight in Dataset: 0.1168 (11.8%)
 
 #3
