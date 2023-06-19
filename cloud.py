@@ -3,11 +3,13 @@
 # Package Imports
 import numpy as np
 import random
-from superclasses import superclasses
+from superclasses import populate_superclasses
 
 # Constants
 SCALE_THRESHOLD = 0.99
 PROBABILITY_THRESHOLD = 5
+
+superclasses = populate_superclasses()
 
 # Class Definitions
 class CloudProcessor:
@@ -181,8 +183,6 @@ class CloudProcessor:
 
             point_cloud[i, :3] = mean
             point_cloud[i, 4:] = color_data
-        
-        
         
         if not return_matrix:
             return points
