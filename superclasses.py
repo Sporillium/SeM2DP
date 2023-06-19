@@ -1,4 +1,5 @@
 # File for defining Superclass groupings:
+# New Superclass Structure:
 
 #-1
 void_class = [-1]
@@ -6,69 +7,113 @@ void_class = [-1]
 # Total Weight in Dataset: 0.0725 (7.25%)
 
 #0
-structures_class = [0, 1, 8, 14, 25, 42, 48, 53, 58, 59, 61, 77, 79, 84, 95, 96, 101, 109, 121, 122, 140]
-'''Wall, Building, Window, Door, House, Column, Skyscraper, Stairs, Screen Door, Stariway, Bridge, Bar, Hovel, Tower, Bannister, Escalator,
-    Stage, Swimming Pool, Step, Tank, Pier,'''
-# Total Weight in Dataset: 0.3171 (31.71%)
+walls_class = [0]
+'''Walls'''
+# Total Weight in Dataset: 0.1576 (15.76%)
 
 #1
-flat_surface_class = [3, 5, 6, 11, 52, 54, 91, 94]
-'''Floor, Ceiling, Road, Sidewalk, Path, Runway, Dirt Track, Land, '''
-# Total Weight in Dataset: 0.1683 (16.83%)
+buildings_class = [1, 25, 48, 79, 84, 114]
+'''Building, House, Skyscraper, Hut, Tower, Tent'''
+# Total Weight in Dataset: 0.1172 (11.72%)
 
 #2
-furniture_class = [7, 10, 15, 19, 23, 24, 30, 31, 33, 35, 37, 44, 45, 47, 49, 50, 56, 62, 64, 65, 70, 71, 73, 75, 78, 88, 97, 99, 107, 110, 117, 118, 129, 133, 145, 146]
-'''Bed, Cabinent, Table, Chair, Sofa, Shelf, Armchair, Seat, Desk, Wardrobe, Bathtub, Chest of Drawers, Counter, Sink, Fireplace, Refrigerator,
-    Pool Table, Bookcase, Coffee Table, Toilet, Countertop, Stove, Kitchen Island, Swivel Chair, Arcade Machine, Booth, Ottoman, Buffet Counter,
-    Washer, Stool, Cradle, Oven, Dishwasher, Exhaust Hood, Shower, Radiator'''
-# Total Weight in Dataset: 0.1168 (11.8%)
-
-#3
 sky_class = [2]
 '''Sky'''
 # Total Weight in Dataset: 0.0878 (8.78%)
 
+#3
+natural_terrain_class = [9, 13, 16, 21, 26, 29, 46, 52, 60, 68, 91, 94, 109, 113, 128]
+'''Grass, Earth, Mountain, Water, Sea, Field, Sand, Path, River, Hill, Dirt, Land, Swimming Pool, Waterfall, Lake'''
+# Total Weight in Dataset: 0.0705 (7.05%)
+
 #4
-environment_class = [9, 13, 16, 21, 26, 29, 46, 60, 68, 113, 128]
-'''Grass, Earth, Mountain, Water, Sea, Field, Sand, River, Hill, Waterfall, Lake'''
-# Total Weight in Dataset: 0.0669 (6.69%)
+outdoor_objects_class = [4, 17, 34, 42, 66, 72, 104, 125, 132]
+'''Tree, Plant, Rock, Column, Flower, Palm, Fountain, Flowerpot, Sculpture'''
+# Total Weight in Dataset: 0.0675 (6.75%)
 
 #5
-natural_object_class = [4, 17, 34, 66, 72]
-'''Tree, Plant, Rock, Flower, Palm Tree'''
-# Total Weight in Dataset: 0.064 (6.4%)
+floors_class = [3, 28]
+'''Floor, Carpet'''
+# Total Weight in Dataset: 0.0667 (6.67%)
 
 #6
-interior_object_class = [18, 22, 27, 28, 36, 39, 40, 41, 55, 57, 63, 67, 74, 81, 82, 85, 89, 92, 98, 100, 105, 108, 112, 115, 120, 124, 130, 131, 134, 135, 137, 138, 139, 141, 142, 143, 147, 148]
-'''Curtain, Painting, Mirror, Rug, Lamp, Cushion, Base, Box, Case, Pillow, Blind, Book, Computer, Towel, Light, Chandelier Television,
-    Apparel, Bottle, Poster, Conveyor Belt, Toy, Basket, Bag, Food, Microwave, Screen, Blanket, Sconce, Vase, Tray, Ashcan, Fan, CRT Screen,
-    Plate, Monitor, Drinking Glass, Clock'''
-# Total Weight in Dataset: 0.055 (5.5%)
+wall_objects_class = [8, 14, 18, 22, 27, 58, 63, 100, 130, 144, 148]
+'''Window, Door, Curtain, Painting, Mirror, Screen Door, Blind, Poster, Projection Screen, Notice Board, Clock'''
+# Total Weight in Dataset: 0.0583 (5.83%)
 
 #7
-exterior_object_class = [32, 38, 43, 51, 69, 86, 87, 93, 104, 106, 111, 114, 119, 123, 125, 132, 136, 144, 149]
-'''Fence, Railing, Signboard, Grandstand, Bench, Awning, Streetlight, Pole, Fountain, Canopy, Barrel, Tent, Ball, Brand Name, Pot, Sculpture,
-    Traffic Light, Notice Board, Flag'''
-# Total Weight in Dataset: 0.0173 (1.73%)
+artificial_terrain_class = [6, 11, 54]
+'''Road, Sidewalk, Runway'''
+# Total Weight in Dataset: 0.0581 (5.81%)
 
 #8
-creatures_class = [12, 126]
-'''Person, Animal'''
-# Total Weight in Dataset: 0.0164 (1.64%)
+ceilings_class = [5, 36, 82, 85, 134]
+'''Ceiling, Lamp, Light, Chandelier, Sconce'''
+# Total Weight in Dataset: 0.0495 (4.95%)
 
 #9
-vehicles_class = [20, 76, 80, 83, 90, 102, 103, 116, 127]
-'''Car, Boat, Bus, Truck, Airplane, Van, Ship, Minibike, Bicycle '''
-# Total Weight in Dataset: 0.0152 (1.52%)
+cabinets_class = [10, 24, 35, 40, 44, 55, 62, 99]
+'''Cabinet, Shelf, Wardrobe, Pedestal, Chest of Drawers, Display Case, Bookcase, Sideboard'''
+# Total Weight in Dataset: 0.0348 (3.48%)
 
-superclasses = {-1:void_class,
-           0: structures_class,
-           1: flat_surface_class,
-           2: furniture_class,
-           3: sky_class,
-           4: environment_class,
-           5: natural_object_class,
-           6: interior_object_class,
-           7: exterior_object_class,
-           8: creatures_class,
-           9: vehicles_class}
+#10
+dynamic_objects_class = [12, 20, 76, 80, 83, 90, 102, 103, 116, 126, 127]
+'''Person, Car, Boat, Bus, Truck, Aeroplane, Van, Ship, Motorbike, Animal, Bicycle'''
+# Total Weight in Dataset: 0.0316 (3.16%)
+
+#11
+tables_class = [15, 33, 41, 45, 56, 64, 67, 70, 73, 77, 88, 98, 108, 111, 112, 119, 120, 135, 137, 142, 147]
+'''Table, Desk, Box, Counter, Pool Table, Coffee Table, Book, Countertop, Kitchen Island, Bar, Cubicle, Bottle, Toy,
+   Barrel, Basket, Ball, Food, Vase, Tray, Plate, Glass'''
+# Total Weight in Dataset: 0.0308 (3.08%)
+
+#12
+bed_class = [7, 39, 57, 81, 92, 115, 117, 131]
+'''Bed, Cushion, Pillow, Towel, Apparel, Bag, Cradle, Blanket'''
+# Total Weight in Dataset: 0.03 (3.00%)
+
+#13
+seating_class = [19, 23, 30, 31, 69, 75, 97, 110]
+'''Chair, Sofa, Armchair, Seat, Bench, Swivel Chair, Ottoman, Stool'''
+# Total Weight in Dataset: 0.029 (2.9%)
+
+#14
+large_structures_class = [32, 38, 43, 51, 53, 59, 61, 86, 87, 93, 95, 96, 101, 105, 106, 121, 122, 123, 136, 140, 149]
+'''Fence, Railing, Signboard, Grandstand, Stairs, Stariway, Bridge, Awning, Streetlight, Pole, Bannister, Escalator,
+   Stage, Conveyor Belt, Canopy, Step, Tank, Marquee, Traffic Light, Pier, Flag'''
+# Total Weight in Dataset: 0.021 (2.1%)
+
+#15
+appliances_class = [37, 47, 49, 50, 65, 71, 74, 78, 89, 107, 118, 124, 129, 133, 138, 139, 141, 143, 145, 146]
+'''Bathtub, Sink, Fireplace, Refrigerator, Toilet, Stove, Computer, Arcade Machine, Television, Washer, Oven,
+   Microwave, Dishwasher, Exhaust Hood, Trash Can, Fan, CRT Screen, Monitor, Shower, Radiator'''
+# Total Weight in Dataset: 0.0171 (1.71%)
+
+def populate_superclasses(zero_index = True):
+    superclasses = {}
+    superclasses_initial = {
+        -1:void_class,
+        0:walls_class,
+        1:buildings_class,
+        2:sky_class,
+        3:natural_terrain_class,
+        4:outdoor_objects_class,
+        5:floors_class,
+        6:wall_objects_class,
+        7:artificial_terrain_class,
+        8:ceilings_class,
+        9:cabinets_class,
+        10:dynamic_objects_class,
+        11:tables_class,
+        12:bed_class,
+        13:seating_class,
+        14:large_structures_class,
+        15:appliances_class
+    }
+    if not zero_index:
+        for k,v in superclasses_initial.items():
+            val = [x+1 for x in v]
+            superclasses[k] = val
+        return superclasses
+    else:
+        return superclasses_initial
