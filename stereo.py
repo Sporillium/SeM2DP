@@ -18,8 +18,8 @@ FIXED_BLUR = np.array([ [0.0023997,  0.00590231, 0.01012841, 0.0121259,  0.01012
 
 DYNAMIC_CLASSES = [12, 20, 76, 80, 83, 90, 102, 103, 116, 127] # Dynamic Object Classes
                     #[Person, Car, Boat, Bus, Truck, Airplane, Van, Ship, Motorbike, Bicycle]
-DYNAMIC_CLASSES_SUPER = [8, 9]
-                    #[Creatures, Vehicles]
+DYNAMIC_CLASSES_SUPER = [10]
+                    #[Dynamic Objects]
 UNCLEAR_CLASSES = [2] # Classes that present non-fixed values
                     #[Sky]
 UNCLEAR_CLASSES_SUPER = UNCLEAR_CLASSES
