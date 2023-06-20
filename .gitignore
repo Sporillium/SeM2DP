@@ -142,3 +142,5 @@ dmypy.json
 descriptors.txt
 
 descriptor_texts/
+
+param_pairs.txt
