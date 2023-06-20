@@ -58,3 +58,11 @@ ID:
         - 830
         - 2720
       poses_path: '/home/march/devel/datasets/Kitti/odometry-2012/poses/'
+  1: #Malaga 2009 Parking Lot 6
+      name: 'malaga'
+      baseline: 0.857
+      focal_length: 916.623
+      x_off: 513.30865
+      y_off: 396.30535
+      image_path: '/home/march/devel/datasets/Malaga/malaga2009_parking_6L/Images_rect/'
+      poses_path: '/home/march/devel/datasets/Malaga/malaga2009_parking_6L/GT_path_vehicle.txt'
