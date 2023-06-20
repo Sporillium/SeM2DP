@@ -185,9 +185,12 @@ def read_file(file_name):
     with open(file_name, 'r') as f:
         lines = f.readlines()
         for line in lines:
-            params = np.fromstring(line, sep=',',dtype=np.int16)
-            param_tuple = (params[0], params[1])
-            pairs.append(param_tuple)
+            if '#' in line:
+                continue
+            else:
+                params = np.fromstring(line, sep=',',dtype=np.int16)
+                param_tuple = (params[0], params[1])
+                pairs.append(param_tuple)
     return pairs
 
 if __name__ == '__main__':
@@ -288,8 +291,7 @@ if __name__ == '__main__':
             param_list = read_file(file_name)
             print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
             num_plots = len(param_list)
-            plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
-           
+            
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.set_aspect('equal')
@@ -297,6 +299,8 @@ if __name__ == '__main__':
             ax.set_xlabel("Recall")
             ax.set_ylabel("Precision")
 
+            ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+           
             for pair in param_list:
                 define_curves(pair, mod_type, ax)
 
@@ -304,4 +308,5 @@ if __name__ == '__main__':
             ax.legend()
             ax.set_xlim([-0.01, 1.01])
             ax.set_ylim([-0.01, 1.01])
+            
             plt.show()
