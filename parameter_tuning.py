@@ -65,18 +65,15 @@ def evaluate_matches(input_descriptors, cloud_ids, distances, des_size, label, r
     matcher = cv.BFMatcher_create(cv.NORM_L2)
     match_boundary = 50 # Number of frames before/after matching can occur
     gt_threshold = 10.0
-    
     thresholds = np.arange(0.0, 1.0, 0.005)
     precision = []
     recall = []
-
     for thresh in tqdm(thresholds, desc='MATCH '+label, leave=False):
         # Define values:
         tp = 0
         tn = 0
         fp = 0
         fn = 0
-
         for id in cloud_ids:
             base_cloud = input_descriptors[id,:].reshape((1,des_size))    
             # Create valid matching set:
@@ -85,14 +82,11 @@ def evaluate_matches(input_descriptors, cloud_ids, distances, des_size, label, r
             else:
                 valid_descriptors = input_descriptors[:id-match_boundary, :]
                 valid_ids = cloud_ids[:id-match_boundary]
-            
             # Run matcher
             match_result = matcher.match(base_cloud, valid_descriptors)
             best_match = match_result[0]
-
             matched_cloud_id = valid_ids[best_match.trainIdx]
             match_distance = best_match.distance
-
             # Perform Evaluations:
             dist_vector = distances[id, :id-match_boundary]
             if match_distance <= thresh:
@@ -115,7 +109,6 @@ def evaluate_matches(input_descriptors, cloud_ids, distances, des_size, label, r
             recall.append(tp/(tp+fn))
         except:
             recall.append(0)
-    
     mAP = average_precision(precision, recall)
 
     if not return_data:
@@ -151,29 +144,22 @@ def define_curves(params, model, axes):
 def bilinear(circs, bins, vals):
     mid_circ = (circs[1] + circs[0])/2
     mid_bin = (bins[1] + bins[0])/2
-
     weight = 1/((circs[1] - circs[0])*(bins[1] - bins[0]))
-
     circ_lerp = np.array([circs[1]-mid_circ, mid_circ-circs[0]])
     bin_lerp = np.array([[bins[1]-mid_bin],[mid_bin-bins[0]]])
     val_lerp = np.array([[vals[0], vals[1]],[vals[2], vals[3]]])
-
     return weight*(circ_lerp@val_lerp@bin_lerp)
 
 def recursive_search(c_min, c_max, b_min, b_max, search_space, model):
     c_mid = int(np.floor((c_min + c_max)/2))
     b_mid = int(np.floor((b_min + b_max)/2))
-
-
     # Check if new division is too small
     if c_mid == c_min or b_mid == b_min:
         return None
-
     # Define Search Parameters
     c_search = [c_min, c_mid, c_max]
     b_search = [b_min, b_mid, b_max]
     search_iteration = iter.product(c_search, b_search)
-
     # Perform Function Evals
     for pair in search_iteration:
         if search_space[pair] == 0:
@@ -204,15 +190,12 @@ if __name__ == '__main__':
     # Required Parameters
     parser.add_argument('-e', '--ex_type', required=True, type=str, help="Specify the execution type, either 'search', 'single', or 'display'")
     parser.add_argument('-n', '--sequence', required=True, type=int, help="Specify the KITTI sequence to use for tuning")
-
     # Other Parameters
     parser.add_argument('-m', '--model', default='normal', type=str, help="Specify the model type, either 'normal', 'super', or 'hamming'. 'compare' can be use in display mode")
     parser.add_argument('-f', '--file', default=None, type=str, help="Specify file path to parameter pairs for execution. Not available in 'single' mode")
     parser.add_argument('-l', '--circles', default=None, type=int, help="Specify the maximum number of circles to divide Semantic Descriptor into")
     parser.add_argument('-t', '--bins', default=None, type=int, help="Specify the maximum number of radial bins to divide each circle into")
     parser.add_argument('-s', '--save', default=None, type=str, help="Specify file name for saving figures")
-    
-
     # Parser arguments and check for inconsistencies
     args = parser.parse_args()
 
