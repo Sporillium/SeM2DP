@@ -45,7 +45,7 @@ class SegmentationEngine:
     def __init__(self, model_id=1, use_gpu=False):
         self.use_gpu = use_gpu
         # Read YAML file with required config options in it:
-        with open('./model_info/model_info.yaml') as f:
+        with open('/home/march/devel/SeM2DP/model_info/model_info.yaml') as f:
             config = yaml.load(f, Loader=SafeLoader)
             col_path = config['colors']
             names_path = config['names']
