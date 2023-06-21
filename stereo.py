@@ -80,7 +80,7 @@ class StereoExtractor:
         self.matcherID = matcher
         self.camera_id = camera_id
 
-        with open('./model_info/camera_info.yaml') as f:
+        with open('/home/march/devel/SeM2DP/model_info/camera_info.yaml') as f:
             cameras = yaml.load(f, Loader=SafeLoader)['ID']
             camera_info = cameras[camera_id]
 
