@@ -7,6 +7,7 @@ import argparse
 from tqdm import trange, tqdm
 import itertools as iter
 import matplotlib.pyplot as plt
+import time
 
 # Custom File Imports:
 import segmentation as seg
@@ -41,7 +42,7 @@ def generate_decriptor_array(circs, bins, cloud_engine, seq_leng, model):
         classes = 10
     des_size = ((4*16)+((16*8)+(classes*circs*bins)))
     descriptors = np.zeros((seq_leng,des_size))
-    for im in tqdm(range(seq_leng), desc=label):
+    for im in tqdm(range(seq_leng), desc=label, leave=False):
         if model == 'normal':
             point_cloud = cloud_engine.processFrameFast(im)
             classes = 150
@@ -69,7 +70,7 @@ def evaluate_matches(input_descriptors, cloud_ids, distances, des_size, label, r
     precision = []
     recall = []
 
-    for thresh in tqdm(thresholds, desc='MATCH '+label):
+    for thresh in tqdm(thresholds, desc='MATCH '+label, leave=False):
         # Define values:
         tp = 0
         tn = 0
@@ -134,14 +135,18 @@ def eval_Params(params, model):
     return mAP
 
 def define_curves(params, model, axes):
+    st = time.time()
     (circs, bins) = params
     label = "@ L="+str(circs)+", T="+str(bins)
     descriptors, des_len = generate_decriptor_array(circs, bins, cloud_engine, seq_leng, model)
     cloud_ids = np.arange(seq_leng)
     precision, recall, mAP = evaluate_matches(descriptors, cloud_ids, distances, des_len, label, return_data=True)
     plot_key, = axes.plot(recall, precision)
-    plot_key.set_label("mAP="+f'{mAP:.3}'+" "+label)
-    print("-------------------------------------")
+    plot_key.set_label(model+" mAP="+f'{mAP:.3}'+" "+label)
+    et = time.time()
+    elapsed_time = (et-st)/60
+    print(model+" mAP="+f'{mAP:.3}'+" "+label+" total elapsed time: {:d}:{:d}".format(elapsed_time/60, elapsed_time%60))
+    #print("-------------------------------------")
 
 def bilinear(circs, bins, vals):
     mid_circ = (circs[1] + circs[0])/2
@@ -201,10 +206,11 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--sequence', required=True, type=int, help="Specify the KITTI sequence to use for tuning")
 
     # Other Parameters
-    parser.add_argument('-m', '--model', default='normal', type=str, help="Specify the model type, either 'normal', 'super', or 'hamming'")
+    parser.add_argument('-m', '--model', default='normal', type=str, help="Specify the model type, either 'normal', 'super', or 'hamming'. 'compare' can be use in display mode")
     parser.add_argument('-f', '--file', default=None, type=str, help="Specify file path to parameter pairs for execution. Not available in 'single' mode")
     parser.add_argument('-l', '--circles', default=None, type=int, help="Specify the maximum number of circles to divide Semantic Descriptor into")
     parser.add_argument('-t', '--bins', default=None, type=int, help="Specify the maximum number of radial bins to divide each circle into")
+    parser.add_argument('-s', '--save', default=None, type=str, help="Specify file name for saving figures")
     
 
     # Parser arguments and check for inconsistencies
@@ -216,23 +222,24 @@ if __name__ == '__main__':
     mod_type = args.model
     ex_type = args.ex_type
     file_name = args.file
+    save_name = args.save
 
-    if mod_type not in ['normal', 'super', 'hamming']:
+    if mod_type not in ['normal', 'super', 'hamming', 'compare']:
         print("Undefined Model Type Specified, please choose either: \n\n\tnormal \n\tsuper \n\thamming")
         exit()
     if ex_type not in ['search', 'single', 'display']:
         print("Undefined Execution type specified, please choose either 'search' or 'single'")
         exit()
-    
+    if mod_type == 'compare' and ex_type != 'display':
+        print("'compare mode only available in display mode. Use -e display or --ex_type display to enter this mode")
+        exit()
     if seq not in range(11):
         print("Chosen sequence has no ground truth available, please choose from Kitti Sequences 00 thru 10")
         exit()
-    
     if max_circles != None and max_bins != None and file_name == None:
         if max_circles < 1 or max_bins < 1:
             print("Please select valid parameter ranges if an input file is not specified [L >= 1, T >= 1]")
             exit()
-    
     if max_circles == None and max_bins == None and file_name == None:
         print("Please include either a range of Circles and Bins using the -l and -t switches, or a file of parameters using the -f switch")
         exit()
@@ -256,57 +263,79 @@ if __name__ == '__main__':
 
     # Check the number of parameter combinations:
     if ex_type == 'search':
-        
         if file_name == None:
             print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[range]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tCIRCLE RANGE:\t1-"+str(max_circles)+"\n\tBIN RANGE:\t1-"+str(max_bins)+"\n")
             circles = np.arange(1, max_circles+1)
             bins = np.arange(1, max_bins+1)
-
             num_eval = len(circles) * len(bins)
-
             search_space = np.zeros((len(circles)+1, len(bins)+1))
-
-            # if num_eval > 9:
-            #     print("Using Dynamic Search")
-            #     print(num_eval)
-            
             recursive_search(circles[0], circles[-1], bins[0], bins[-1], search_space, mod_type)
-    
         else:
             param_list = read_file(file_name)
             print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
             for pair in param_list:
                 eval_Params(pair, mod_type)
-
-
     elif ex_type == 'single':
         print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tCIRCLE VAL:\t"+str(max_circles)+"\n\tBIN VAL:\t"+str(max_bins)+"\n")
         eval_Params((max_circles,max_bins), mod_type)
-    
     elif ex_type == 'display':
         # Load Parameters to Evaluate
         if file_name == None:
             print("NOT CURRENTLY IMPLEMENTED! PLEASE SPECIFY A FILE WITH DISPLAY MODE")
         else:
-            param_list = read_file(file_name)
-            print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
-            num_plots = len(param_list)
-            
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.set_aspect('equal')
-            ax.set_title("Precision - Recall Curve: Sequence "+seq_name)
-            ax.set_xlabel("Recall")
-            ax.set_ylabel("Precision")
+            if mod_type != 'compare':
+                param_list = read_file(file_name)
+                print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
+                num_plots = len(param_list)
+                
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.set_aspect('equal')
+                ax.set_title("Precision - Recall Curve: Sequence "+seq_name)
+                ax.set_xlabel("Recall")
+                ax.set_ylabel("Precision")
 
-            ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
-           
-            for pair in param_list:
-                define_curves(pair, mod_type, ax)
-
-            ax.grid()
-            ax.legend()
-            ax.set_xlim([-0.01, 1.01])
-            ax.set_ylim([-0.01, 1.01])
+                ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
             
-            plt.show()
+                for pair in param_list:
+                    define_curves(pair, mod_type, ax)
+
+                ax.grid()
+                ax.legend()
+                ax.set_xlim([-0.01, 1.01])
+                ax.set_ylim([-0.01, 1.01])
+
+                manager = plt.get_current_fig_manager()
+                manager.window.showMaximized()
+                
+                fig.set_size_inches((8.5, 11), forward=False)
+                plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
+            else:
+                param_list = read_file(file_name)
+                print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
+                num_plots = 2*len(param_list)
+                
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.set_aspect('equal')
+                ax.set_title("Precision - Recall Curve: Sequence "+seq_name)
+                ax.set_xlabel("Recall")
+                ax.set_ylabel("Precision")
+                ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+
+                for pair in param_list:
+                    define_curves(pair, 'super', ax)
+                    define_curves(pair, 'normal', ax)
+
+                ax.grid()
+                ax.legend()
+                ax.set_xlim([-0.01, 1.01])
+                ax.set_ylim([-0.01, 1.01])
+
+                manager = plt.get_current_fig_manager()
+                manager.window.showMaximized()
+                
+                fig.set_size_inches((8.5, 11), forward=False)
+                plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
+                #plt.show()
+                
