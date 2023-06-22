@@ -100,16 +100,16 @@ def cart2pol(x, y):
     th = np.arctan2(x, y)
     return th, rad
 
-def createColorDescriptor(data, T=16, L=8, P=4, Q=16, J=16):
+def createColorDescriptor(data, T=16, L=8, P=4, Q=16, C=16):
     data = np.asarray(data)
     pos_data = data[:, :3]
-    col_data = data[:,3:]
+    col_data = data[:, 4:]
 
     numT = T
     numR = L
     numP = P
     numQ = Q
-    numC = J
+    numC = C
 
     data_rot = PCARotationInvariant(pos_data)
 
