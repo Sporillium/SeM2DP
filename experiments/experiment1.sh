@@ -43,15 +43,3 @@ case "$experiment" in
     *)
     ;;
 esac
-
-
-
-
-
-# Define start value for time elapse
-
-
-
-
-
-
