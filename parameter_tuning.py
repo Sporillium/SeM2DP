@@ -14,6 +14,7 @@ import segmentation as seg
 import stereo
 import cloud
 from sem2dp import createSemDescriptorHisto_Tune
+from m2dp import createDescriptor, createColorDescriptor
 
 # Global Settings
 SMALL_SIZE = 10
@@ -35,25 +36,50 @@ plt.rc('lines', linewidth=SMALL_WIDTH)  # line width
 
 # Function Definitions
 def generate_decriptor_array(circs, bins, cloud_engine, seq_leng, model):
-    label = "DESC @ L="+str(circs)+", T="+str(bins)
+    label = model+" @ L="+str(circs)+", T="+str(bins)
+
     if model == 'normal':
         classes = 150
-    elif model == 'super':
-        classes = 10
-    des_size = ((4*16)+((16*8)+(classes*circs*bins)))
-    descriptors = np.zeros((seq_leng,des_size))
-    for im in tqdm(range(seq_leng), desc=label, leave=False):
-        if model == 'normal':
+        des_size = ((4*16)+((16*8)+(classes*circs*bins)))
+        descriptors = np.zeros((seq_leng,des_size))
+        for im in tqdm(range(seq_leng), desc=label, leave=False):
             point_cloud = cloud_engine.processFrameFast(im)
-            classes = 150
-        elif model == 'super':
+            labels = point_cloud[:, 3]
+            points = point_cloud[:, :3]
+            descriptors[im,:] = createSemDescriptorHisto_Tune(points, labels, C=circs, B=bins, S=classes)
+        descriptors = descriptors.astype(np.float32)
+        return descriptors, des_size
+    
+    elif model == 'super':
+        classes = 16
+        des_size = ((4*16)+((16*8)+(classes*circs*bins)))
+        descriptors = np.zeros((seq_leng,des_size))
+        for im in tqdm(range(seq_leng), desc=label, leave=False):
             point_cloud = cloud_engine.processFrameSuperSemantics(im)
-            classes = 10
-        labels = point_cloud[:, 3]
-        points = point_cloud[:, :3]
-        descriptors[im,:] = createSemDescriptorHisto_Tune(points, labels, C=circs, B=bins, S=classes)
-    descriptors = descriptors.astype(np.float32)
-    return descriptors, des_size
+            labels = point_cloud[:, 3]
+            points = point_cloud[:, :3]
+            descriptors[im,:] = createSemDescriptorHisto_Tune(points, labels, C=circs, B=bins, S=classes)
+        descriptors = descriptors.astype(np.float32)
+        return descriptors, des_size
+    
+    elif model == 'basic':
+        des_size = ((4*16)+(16*8))
+        descriptors = np.zeros((seq_leng,des_size))
+        for im in tqdm(range(seq_leng), desc=label, leave=False):
+            point_cloud = cloud_engine.processFrameNoSemantics(im, return_matrix=True)
+            points = point_cloud[:, :3]
+            descriptors[im,:] = createDescriptor(points)
+        descriptors = descriptors.astype(np.float32)
+        return descriptors, des_size
+    
+    elif model == 'color':
+        des_size = ((4*16)+((16*8)+(16*3*8)))
+        descriptors = np.zeros((seq_leng,des_size))
+        for im in tqdm(range(seq_leng), desc=label, leave=False):
+            point_cloud = cloud_engine.processFrameNoSemantics(im, return_matrix=True)
+            descriptors[im,:] = createColorDescriptor(point_cloud)
+        descriptors = descriptors.astype(np.float32)
+        return descriptors, des_size
 
 def average_precision(prec, rec):
     av_prec = 0
@@ -137,8 +163,8 @@ def define_curves(params, model, axes):
     plot_key, = axes.plot(recall, precision)
     plot_key.set_label(model+" mAP="+f'{mAP:.3}'+" "+label)
     et = time.time()
-    elapsed_time = (et-st)/60
-    print(model+" mAP="+f'{mAP:.3}'+" "+label+" total elapsed time: {:d}:{:d}".format(elapsed_time/60, elapsed_time%60))
+    elapsed_time = (et-st)
+    print(model+" mAP="+f'{mAP:.3}'+" "+label+" total elapsed time: {:02.0f}:{:02.0f}".format(elapsed_time/60, elapsed_time%60))
     #print("-------------------------------------")
 
 def bilinear(circs, bins, vals):
@@ -191,7 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--ex_type', required=True, type=str, help="Specify the execution type, either 'search', 'single', or 'display'")
     parser.add_argument('-n', '--sequence', required=True, type=int, help="Specify the KITTI sequence to use for tuning")
     # Other Parameters
-    parser.add_argument('-m', '--model', default='normal', type=str, help="Specify the model type, either 'normal', 'super', or 'hamming'. 'compare' can be use in display mode")
+    parser.add_argument('-m', '--model', default='normal', type=str, help="Specify the model type, either 'normal', 'super', 'basic' or 'color'. 'compare' can be use in display mode")
     parser.add_argument('-f', '--file', default=None, type=str, help="Specify file path to parameter pairs for execution. Not available in 'single' mode")
     parser.add_argument('-l', '--circles', default=None, type=int, help="Specify the maximum number of circles to divide Semantic Descriptor into")
     parser.add_argument('-t', '--bins', default=None, type=int, help="Specify the maximum number of radial bins to divide each circle into")
@@ -207,8 +233,8 @@ if __name__ == '__main__':
     file_name = args.file
     save_name = args.save
 
-    if mod_type not in ['normal', 'super', 'hamming', 'compare']:
-        print("Undefined Model Type Specified, please choose either: \n\n\tnormal \n\tsuper \n\thamming")
+    if mod_type not in ['normal', 'super', 'basic', 'color', 'compare', 'all']:
+        print("Undefined Model Type Specified, please choose either: \n\n\tnormal \n\tsuper \n\tbasic \n\tcolor")
         exit()
     if ex_type not in ['search', 'single', 'display']:
         print("Undefined Execution type specified, please choose either 'search' or 'single'")
@@ -266,10 +292,10 @@ if __name__ == '__main__':
         if file_name == None:
             print("NOT CURRENTLY IMPLEMENTED! PLEASE SPECIFY A FILE WITH DISPLAY MODE")
         else:
-            if mod_type != 'compare':
+            if mod_type == 'all':
                 param_list = read_file(file_name)
                 print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
-                num_plots = len(param_list)
+                num_plots = 4*len(param_list)
                 
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
@@ -277,12 +303,14 @@ if __name__ == '__main__':
                 ax.set_title("Precision - Recall Curve: Sequence "+seq_name)
                 ax.set_xlabel("Recall")
                 ax.set_ylabel("Precision")
-
                 ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
-            
-                for pair in param_list:
-                    define_curves(pair, mod_type, ax)
 
+                for pair in param_list:
+                    define_curves(pair, 'basic', ax)
+                    define_curves(pair, 'color', ax)
+                    define_curves(pair, 'super', ax)
+                    define_curves(pair, 'normal', ax)
+                
                 ax.grid()
                 ax.legend()
                 ax.set_xlim([-0.01, 1.01])
@@ -293,7 +321,8 @@ if __name__ == '__main__':
                 
                 fig.set_size_inches((8.5, 11), forward=False)
                 plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
-            else:
+
+            elif mod_type == 'compare':
                 param_list = read_file(file_name)
                 print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
                 num_plots = 2*len(param_list)
@@ -321,4 +350,31 @@ if __name__ == '__main__':
                 fig.set_size_inches((8.5, 11), forward=False)
                 plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
                 #plt.show()
+            else:
+                param_list = read_file(file_name)
+                print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
+                num_plots = len(param_list)
+                
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.set_aspect('equal')
+                ax.set_title("Precision - Recall Curve: Sequence "+seq_name)
+                ax.set_xlabel("Recall")
+                ax.set_ylabel("Precision")
+
+                ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+            
+                for pair in param_list:
+                    define_curves(pair, mod_type, ax)
+
+                ax.grid()
+                ax.legend()
+                ax.set_xlim([-0.01, 1.01])
+                ax.set_ylim([-0.01, 1.01])
+
+                manager = plt.get_current_fig_manager()
+                manager.window.showMaximized()
+                
+                fig.set_size_inches((8.5, 11), forward=False)
+                plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
                 
