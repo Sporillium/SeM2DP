@@ -31,7 +31,7 @@ case "$experiment" in
     3)
     # Experiment 3: Compare Normal and Super, Seq 00
         echo "$(date) Starting Experiment 3" >> $logfile 
-        python $programfile/parameter_tuning.py -e display -n 0 -m all-f inputs/all_comp_params.txt -s results/comparisons/all_seq00 >> $logfile 
+        python $programfile/parameter_tuning.py -e display -n 0 -m all -f inputs/all_comp_params.txt -s results/comparisons/all_seq00 >> $logfile 
         echo "$(date) Experiment 3 Complete" >> $logfile 
     ;&
     4)
