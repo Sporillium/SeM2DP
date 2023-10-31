@@ -7,6 +7,7 @@ import argparse
 from tqdm import trange, tqdm
 import itertools as iter
 import matplotlib.pyplot as plt
+from cycler import cycler
 import time
 
 # Custom File Imports:
@@ -24,6 +25,7 @@ BIGGER_SIZE = 14
 SMALL_WIDTH = 3
 MEDIUM_WIDTH = 4
 BIGGER_WIDTH = 5
+MEATY_WIDTH = 8
 
 plt.rc('font', size=BIGGER_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=BIGGER_SIZE)     # fontsize of the axes title
@@ -32,7 +34,23 @@ plt.rc('xtick', labelsize=BIGGER_SIZE)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=BIGGER_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=BIGGER_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title\
-plt.rc('lines', linewidth=SMALL_WIDTH)  # line width
+plt.rc('lines', linewidth=MEATY_WIDTH)  # line width
+
+use_svg = True
+reduced_label = True
+
+color_cycler = cycler(color=[   '#ff6666',
+                                '#66ff66',
+                                '#6666ff',
+                                '#ffb366',
+                                '#66ffb3',
+                                '#b266ff',
+                                '#ffff66',
+                                '#66ffff',
+                                '#ff66ff',
+                                '#b3ff66',
+                                '#66b2ff',
+                                '#ff66b3'])
 
 # Function Definitions
 def generate_decriptor_array(circs, bins, cloud_engine, seq_leng, model):
@@ -42,43 +60,150 @@ def generate_decriptor_array(circs, bins, cloud_engine, seq_leng, model):
         classes = 150
         des_size = ((4*16)+((16*8)+(classes*circs*bins)))
         descriptors = np.zeros((seq_leng,des_size))
+        des_times = []
+        sem_times = []
+        feature_times = []
+        proj_times = []
         for im in tqdm(range(seq_leng), desc=label, leave=False):
-            point_cloud = cloud_engine.processFrameFast(im)
+            point_cloud, sem_time, feat_time, proj_time = cloud_engine.processFrameFastTiming(im)
+            sem_times.append(sem_time)
+            feature_times.append(feat_time)
+            proj_times.append(proj_time)
+
             labels = point_cloud[:, 3]
             points = point_cloud[:, :3]
+
+            des_start = time.perf_counter()
             descriptors[im,:] = createSemDescriptorHisto_Tune(points, labels, C=circs, B=bins, S=classes)
+            des_times.append(time.perf_counter() - des_start)
+
         descriptors = descriptors.astype(np.float32)
+
+        print("TIMING STATISTICS FOR COMPONENTS IN SECONDS:")
+        des_avg = np.mean(des_times)
+        des_std = np.std(des_times)
+        print("\tDescriptor Computing -- AVG: "+f'{des_avg:.9}'+" STD: "+f'{des_std:.9}')
+
+        sem_avg = np.mean(sem_times)
+        sem_std = np.std(sem_times)
+        print("\tSemantic Segmentation -- AVG: "+f'{sem_avg:.9}'+" STD: "+f'{sem_std:.6}')
+
+        feat_avg = np.mean(feature_times)
+        feat_std = np.std(feature_times)
+        print("\tFeature Det & Match -- AVG: "+f'{feat_avg:.9}'+" STD: "+f'{feat_std:.9}')
+
+        proj_avg = np.mean(proj_times)
+        proj_std = np.std(proj_times)
+        print("\tPoint Projection -- AVG: "+f'{proj_avg:.9}'+" STD: "+f'{proj_std:.9}')
+
         return descriptors, des_size
     
     elif model == 'super':
         classes = 16
         des_size = ((4*16)+((16*8)+(classes*circs*bins)))
         descriptors = np.zeros((seq_leng,des_size))
+        des_times = []
+        sem_times = []
+        feature_times = []
+        proj_times = []
         for im in tqdm(range(seq_leng), desc=label, leave=False):
-            point_cloud = cloud_engine.processFrameSuperSemantics(im)
+            point_cloud, sem_time, feat_time, proj_time = cloud_engine.processFrameSuperSemanticsTiming(im)
+            sem_times.append(sem_time)
+            feature_times.append(feat_time)
+            proj_times.append(proj_time)
+
             labels = point_cloud[:, 3]
             points = point_cloud[:, :3]
+
+            des_start = time.perf_counter()
             descriptors[im,:] = createSemDescriptorHisto_Tune(points, labels, C=circs, B=bins, S=classes)
+            des_times.append(time.perf_counter() - des_start)
+
         descriptors = descriptors.astype(np.float32)
+
+        print("TIMING STATISTICS FOR COMPONENTS IN SECONDS:")
+        des_avg = np.mean(des_times)
+        des_std = np.std(des_times)
+        print("\tDescriptor Computing -- AVG: "+f'{des_avg:.9}'+" STD: "+f'{des_std:.9}')
+
+        sem_avg = np.mean(sem_times)
+        sem_std = np.std(sem_times)
+        print("\tSemantic Segmentation -- AVG: "+f'{sem_avg:.9}'+" STD: "+f'{sem_std:.6}')
+
+        feat_avg = np.mean(feature_times)
+        feat_std = np.std(feature_times)
+        print("\tFeature Det & Match -- AVG: "+f'{feat_avg:.9}'+" STD: "+f'{feat_std:.9}')
+
+        proj_avg = np.mean(proj_times)
+        proj_std = np.std(proj_times)
+        print("\tPoint Projection -- AVG: "+f'{proj_avg:.9}'+" STD: "+f'{proj_std:.9}')
+
         return descriptors, des_size
     
     elif model == 'basic':
         des_size = ((4*16)+(16*8))
         descriptors = np.zeros((seq_leng,des_size))
+        des_times = []
+        feature_times = []
+        proj_times = []
         for im in tqdm(range(seq_leng), desc=label, leave=False):
-            point_cloud = cloud_engine.processFrameNoSemantics(im, return_matrix=True)
+            point_cloud, feat_time, proj_time = cloud_engine.processFrameNoSemanticsTiming(im)
+            feature_times.append(feat_time)
+            proj_times.append(proj_time)
+
             points = point_cloud[:, :3]
+
+            des_start = time.perf_counter()
             descriptors[im,:] = createDescriptor(points)
+            des_times.append(time.perf_counter() - des_start)
+
         descriptors = descriptors.astype(np.float32)
+
+        print("TIMING STATISTICS FOR COMPONENTS IN SECONDS:")
+        des_avg = np.mean(des_times)
+        des_std = np.std(des_times)
+        print("\tDescriptor Computing -- AVG: "+f'{des_avg:.9}'+" STD: "+f'{des_std:.9}')
+
+        feat_avg = np.mean(feature_times)
+        feat_std = np.std(feature_times)
+        print("\tFeature Det & Match -- AVG: "+f'{feat_avg:.9}'+" STD: "+f'{feat_std:.9}')
+
+        proj_avg = np.mean(proj_times)
+        proj_std = np.std(proj_times)
+        print("\tPoint Projection -- AVG: "+f'{proj_avg:.9}'+" STD: "+f'{proj_std:.9}')
+
         return descriptors, des_size
     
     elif model == 'color':
         des_size = ((4*16)+((16*8)+(16*3*8)))
         descriptors = np.zeros((seq_leng,des_size))
+        des_times = []
+        feature_times = []
+        proj_times = []
         for im in tqdm(range(seq_leng), desc=label, leave=False):
-            point_cloud = cloud_engine.processFrameNoSemantics(im, return_matrix=True)
+            point_cloud, feat_time, proj_time = cloud_engine.processFrameNoSemanticsTiming(im)
+            feature_times.append(feat_time)
+            proj_times.append(proj_time)
+
+            des_start = time.perf_counter()
             descriptors[im,:] = createColorDescriptor(point_cloud)
+            des_times.append(time.perf_counter() - des_start)
+
         descriptors = descriptors.astype(np.float32)
+
+        print("TIMING STATISTICS FOR COMPONENTS IN SECONDS:")
+        des_avg = np.mean(des_times)
+        des_std = np.std(des_times)
+        print("\tDescriptor Computing -- AVG: "+f'{des_avg:.9}'+" STD: "+f'{des_std:.9}')
+
+        feat_avg = np.mean(feature_times)
+        feat_std = np.std(feature_times)
+        print("\tFeature Det & Match -- AVG: "+f'{feat_avg:.9}'+" STD: "+f'{feat_std:.9}')
+
+        proj_avg = np.mean(proj_times)
+        proj_std = np.std(proj_times)
+        print("\tPoint Projection -- AVG: "+f'{proj_avg:.9}'+" STD: "+f'{proj_std:.9}')
+
         return descriptors, des_size
 
 def average_precision(prec, rec):
@@ -153,18 +278,25 @@ def eval_Params(params, model):
     print("-------------------------------------")
     return mAP
 
-def define_curves(params, model, axes):
+def define_curves(params, model, axes, modelName=False):
     st = time.time()
     (circs, bins) = params
-    label = "@ L="+str(circs)+", T="+str(bins)
+    label = "L="+str(circs)+", T="+str(bins)
     descriptors, des_len = generate_decriptor_array(circs, bins, cloud_engine, seq_leng, model)
     cloud_ids = np.arange(seq_leng)
     precision, recall, mAP = evaluate_matches(descriptors, cloud_ids, distances, des_len, label, return_data=True)
+    max_rec = find_max_rec(precision, recall)
     plot_key, = axes.plot(recall, precision)
-    plot_key.set_label(model+" mAP="+f'{mAP:.3}'+" "+label)
+    if reduced_label:
+        if modelName:
+            plot_key.set_label(model)
+        else:
+            plot_key.set_label(label)
+    else:
+        plot_key.set_label(model+" mAP="+f'{mAP:.3}'+" @ "+label)
     et = time.time()
     elapsed_time = (et-st)
-    print(model+" mAP="+f'{mAP:.3}'+" "+label+" total elapsed time: {:02.0f}:{:02.0f}".format(elapsed_time/60, elapsed_time%60))
+    print(model+" mAP="+f'{mAP:.3}'+", rec@100%="+f'{max_rec:.3}'+" @ "+label+" total elapsed time: {:02.0f}:{:02.0f}".format(elapsed_time/60, elapsed_time%60))
     #print("-------------------------------------")
 
 def bilinear(circs, bins, vals):
@@ -210,6 +342,12 @@ def read_file(file_name):
                 pairs.append(param_tuple)
     return pairs
 
+def find_max_rec(prec_list, rec_list):
+    prec = np.asarray(prec_list)
+    rec = np.asarray(rec_list)
+
+    return np.max(rec[prec >= 1.0])
+
 if __name__ == '__main__':
     # Argument Parser Options:
     parser = argparse.ArgumentParser(description="Perform Parameter Tuning on SeM2DP Models")
@@ -222,6 +360,9 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--circles', default=None, type=int, help="Specify the maximum number of circles to divide Semantic Descriptor into")
     parser.add_argument('-t', '--bins', default=None, type=int, help="Specify the maximum number of radial bins to divide each circle into")
     parser.add_argument('-s', '--save', default=None, type=str, help="Specify file name for saving figures")
+
+    parser.add_argument('--feature', default='SIFT', type=str, help="Specify the type of image feature to use")
+    parser.add_argument('--sem_model', default=6, type=int, help="Specify Semantic Segmentation Model ID")
     # Parser arguments and check for inconsistencies
     args = parser.parse_args()
 
@@ -232,6 +373,8 @@ if __name__ == '__main__':
     ex_type = args.ex_type
     file_name = args.file
     save_name = args.save
+    im_feature = args.feature
+    sem_model = args.sem_model
 
     if mod_type not in ['normal', 'super', 'basic', 'color', 'compare', 'all']:
         print("Undefined Model Type Specified, please choose either: \n\n\tnormal \n\tsuper \n\tbasic \n\tcolor")
@@ -254,8 +397,8 @@ if __name__ == '__main__':
         exit()
 
     # Create all of the model required systems:
-    segmentation_engine = seg.SegmentationEngine(model_id=6, use_gpu=True)
-    stereo_extractor = stereo.StereoExtractor(segmentation_engine, detector='SIFT', matcher='BF', camera_id=0, seq=seq)
+    segmentation_engine = seg.SegmentationEngine(model_id=sem_model, use_gpu=True)
+    stereo_extractor = stereo.StereoExtractor(segmentation_engine, detector=im_feature, matcher='BF', camera_id=0, seq=seq)
     cloud_engine = cloud.CloudProcessor(stereo_extractor)
     seq_leng = stereo_extractor.seq_len
     seq_name = f'{seq:02}'
@@ -303,7 +446,7 @@ if __name__ == '__main__':
                 ax.set_title("Precision - Recall Curve: Sequence "+seq_name)
                 ax.set_xlabel("Recall")
                 ax.set_ylabel("Precision")
-                ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+                ax.set_prop_cycle(color_cycler)
 
                 for pair in param_list:
                     define_curves(pair, 'basic', ax)
@@ -318,10 +461,14 @@ if __name__ == '__main__':
 
                 manager = plt.get_current_fig_manager()
                 manager.window.showMaximized()
-                
-                fig.set_size_inches((8.5, 11), forward=False)
-                plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
 
+                if use_svg:
+                    fig.set_size_inches((6, 6), forward=False)
+                    plt.savefig(save_name+'.svg', format='svg')
+                else:
+                    fig.set_size_inches((8.5, 11), forward=False)
+                    plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
+                
             elif mod_type == 'compare':
                 param_list = read_file(file_name)
                 print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
@@ -333,11 +480,11 @@ if __name__ == '__main__':
                 ax.set_title("Precision - Recall Curve: Sequence "+seq_name)
                 ax.set_xlabel("Recall")
                 ax.set_ylabel("Precision")
-                ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+                ax.set_prop_cycle(color_cycler)
 
                 for pair in param_list:
-                    define_curves(pair, 'super', ax)
-                    define_curves(pair, 'normal', ax)
+                    define_curves(pair, 'super', ax, modelName=True)
+                    define_curves(pair, 'normal', ax, modelName=True)
 
                 ax.grid()
                 ax.legend()
@@ -347,9 +494,13 @@ if __name__ == '__main__':
                 manager = plt.get_current_fig_manager()
                 manager.window.showMaximized()
                 
-                fig.set_size_inches((8.5, 11), forward=False)
-                plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
-                #plt.show()
+                if use_svg:
+                    fig.set_size_inches((6, 6), forward=False)
+                    plt.savefig(save_name+'.svg', format='svg')
+                else:
+                    fig.set_size_inches((8.5, 11), forward=False)
+                    plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
+
             else:
                 param_list = read_file(file_name)
                 print("\n\nPARAMETER SUMMARY:\n\tEVAL TYPE:\t"+ex_type+"-[file]\n\tMODEL TYPE:\t"+mod_type+"\n\tTUNING SEQ:\t"+seq_name+"\n\tFILE NAME:\t"+file_name+"\n\tFILE LENGTH:\t"+str(len(param_list))+"\n")
@@ -362,7 +513,7 @@ if __name__ == '__main__':
                 ax.set_xlabel("Recall")
                 ax.set_ylabel("Precision")
 
-                ax.set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, num_plots))))
+                ax.set_prop_cycle(color_cycler)
             
                 for pair in param_list:
                     define_curves(pair, mod_type, ax)
@@ -375,6 +526,10 @@ if __name__ == '__main__':
                 manager = plt.get_current_fig_manager()
                 manager.window.showMaximized()
                 
-                fig.set_size_inches((8.5, 11), forward=False)
-                plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
+                if use_svg:
+                    fig.set_size_inches((6, 6), forward=False)
+                    plt.savefig(save_name+'.svg', format='svg')
+                else:
+                    fig.set_size_inches((8.5, 11), forward=False)
+                    plt.savefig(save_name+'.png', dpi=300, bbox_inches='tight')
                 

@@ -4,6 +4,7 @@
 import numpy as np
 import random
 from superclasses import populate_superclasses
+from time import perf_counter_ns, perf_counter
 
 # Constants
 SCALE_THRESHOLD = 0.99
@@ -188,6 +189,7 @@ class CloudProcessor:
             return points
         else:
             return point_cloud
+        
     
     def processPoseChange(self, prev_cloud, curr_cloud):
         """
@@ -270,7 +272,134 @@ class CloudProcessor:
         if transform is not None:
             for point in cloud_list:
                 point.transformLocation(transform)
+
+    def processFrameFastTiming(self, img, filter_unclear_classes=True, filter_dynamic_classes=False):
+        sem_start = perf_counter()
+        labels_L, img_SL = self.stereo_extractor.semanticsMaxFromImages(img)
+        sem_time = perf_counter() - sem_start
+
+        feature_start = perf_counter()
+        epi_mat, kpL, kpR, desL, desR, imgL = self.stereo_extractor.pointsFromImages(img)
+        feature_time = perf_counter() - feature_start
+
+        point_cloud = np.zeros((len(epi_mat), 7))
+
+        #points = []
+        proj_start = perf_counter()
+        for mat, i in zip(epi_mat, range(len(epi_mat))):
+            featL = kpL[mat.queryIdx]
+            featR = kpR[mat.trainIdx]
+            #descL = desL[mat.queryIdx]
+            #descR = desR[mat.trainIdx]
+
+            (xl, yl) = featL.pt
+            (xr, yr) = featR.pt
+            
+
+            mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
+
+            label_data = labels_L[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32)]
+            color_data = imgL[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32), :]
+
+            #point = MeasuredPoint(mean, cov, sem_dist=None, left_descriptor=descL, right_descriptor=descR)
+            #points.append(point)
+
+            point_cloud[i, :3] = mean
+            point_cloud[i, 3] = label_data
+            point_cloud[i, 4:] = color_data
+
+         #print("Total points before filtering: ", len(points))
+        proj_time = perf_counter() - proj_start
+        if filter_unclear_classes:
+            point_cloud = self.stereo_extractor.excludeUncertainLabelsMatrix(point_cloud)
         
+        if filter_dynamic_classes:
+            point_cloud = self.stereo_extractor.excludeDynamicLabelsMatrix(point_cloud)
+        
+        return point_cloud, sem_time, feature_time, proj_time
+    
+    def processFrameSuperSemanticsTiming(self, img, filter_unclear_classes=True, filter_dynamic_classes=False):
+        sem_start = perf_counter()
+        labels_L, img_SL = self.stereo_extractor.semanticsMaxFromImages(img)
+        sem_time = perf_counter() - sem_start
+        
+        feature_start = perf_counter()
+        epi_mat, kpL, kpR, desL, desR, imgL = self.stereo_extractor.pointsFromImages(img)
+        feature_time = perf_counter() - feature_start
+
+        point_cloud = np.zeros((len(epi_mat), 7))
+
+        proj_start = perf_counter()
+        for mat, i in zip(epi_mat, range(len(epi_mat))):
+            featL = kpL[mat.queryIdx]
+            featR = kpR[mat.trainIdx]
+
+            (xl, yl) = featL.pt
+            (xr, yr) = featR.pt
+            
+            mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
+
+            label_data = labels_L[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32)]
+            color_data = imgL[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32), :]
+
+            point_cloud[i, :3] = mean
+            point_cloud[i, 3] = label_data
+            point_cloud[i, 4:] = color_data
+
+        convert_to_super(point_cloud, superclasses)
+        proj_time = perf_counter() - proj_start
+
+        if filter_unclear_classes:
+            point_cloud = self.stereo_extractor.excludeUncertainLabelsMatrix(point_cloud, isSuper=True)
+        
+        if filter_dynamic_classes:
+            point_cloud = self.stereo_extractor.excludeDynamicLabelsMatrix(point_cloud, isSuper=True)
+        
+        return point_cloud, sem_time, feature_time, proj_time
+    
+    def processFrameNoSemanticsTiming(self, img):
+        """
+        Extracts 2D point features and computes 3D Point clouds for a single frame of an input stereo image
+
+        Parameters:
+        ----------
+            img (int): ID of image/frame to process
+
+        Returns:
+        ----------
+            points (list): A list of extracted 3D Semantic points
+        """
+        feat_start = perf_counter()
+        epi_mat, kpL, kpR, desL, desR, imgL = self.stereo_extractor.pointsFromImages(img)
+        feat_time = perf_counter() - feat_start
+
+        point_cloud = np.zeros((len(epi_mat), 7))
+
+        #points = []
+        proj_start = perf_counter()
+        for mat, i in zip(epi_mat, range(len(epi_mat))):
+            featL = kpL[mat.queryIdx]
+            featR = kpR[mat.trainIdx]
+            #descL = desL[mat.queryIdx]
+            #descR = desR[mat.trainIdx]
+
+            (xl, yl) = featL.pt
+            (xr, yr) = featR.pt
+            
+
+            mean, cov = self.stereo_extractor.measurement3DNoise(xl, yl, xr, yr)
+
+            color_data = imgL[np.floor(yl).astype(np.int32), np.floor(xl).astype(np.int32), :]
+
+            #point = MeasuredPoint(mean, cov, sem_dist=None, left_descriptor=descL, right_descriptor=descR)
+            #points.append(point)
+
+            point_cloud[i, :3] = mean
+            point_cloud[i, 4:] = color_data
+        
+        proj_time = perf_counter() - proj_start
+
+        return point_cloud, feat_time, proj_time
 
 class MeasuredPoint:
     """
